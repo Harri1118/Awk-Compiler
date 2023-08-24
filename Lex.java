@@ -11,34 +11,36 @@ public class Lex {
     public Lex(int l, int p, String s) {
         l = line;
         p = position;
+        StringHandler document = new StringHandler(s);
+        boolean b = false;
+        while (b == false) {
+            if (document.IsDone() == true)
+                break;
+            int i = 0;
+            char c;
+            while (document.Peek(i) != ' ' && document.Peek(i) != '\n') {
+                c = document.Peek(i);
+                i = i + 1;
 
-        boolean tempRunner = false;
-        while (tempRunner == false) {
-
-            Lexer reader = new Lexer(s, line, position);
-            String t = reader.getToken().getString();
-            if (notNum(t) == true)
-                processWord(t);
-            else
-                processNumber(t);
-        }
-
-    }
-
-    public String processWord(String s) {
-        return "";
-    }
-
-    public int processNumber(String s) {
-        return 0;
-    }
-
-    private boolean notNum(String s) {
-        for (int i = 0; i < s.length(); i++) {
-            if (Character.isDigit(s.charAt(i)) == false) {
-                return true;
+            }
+            if (document.Peek(i) == '\n' && i == 0) {
+                document.Swallow(1);
+                position++;
+                line++;
+                i++;
+            }
+            if (i == 0) {
+                document.Swallow(1);
+                position++;
+            } else {
+                String w = document.PeekString(i);
+                document.Swallow(w.length());
+                Lexer lexer = new Lexer(w, line, position);
+                position = position + w.length();
+                tokens.add(lexer.getToken());
+                System.out.println(tokens.get(tokens.size() - 1).toString());
             }
         }
-        return false;
     }
+
 }
