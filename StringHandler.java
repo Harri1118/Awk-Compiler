@@ -1,7 +1,11 @@
 public class StringHandler {
+    //Holds text file as string
     private String document;
+
+    //index shows the position that has been parsed so far through the document.
     private int index = 0;
 
+    //Constructor for StringHandler class
     public StringHandler(String s) {
         document = s;
     }
