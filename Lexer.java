@@ -11,14 +11,45 @@ public class Lexer {
     private Token token;
 
     public Lexer(String s, int l, int p) {
+        handle = new StringHandler(s);
         line = l;
         pos = p;
-        handle = new StringHandler(s);
-        String word = handle.PeekString(pos);
-        token = new Token(s, line, pos);
+        if (s.equals("\n")) {
+            token = processNewLine();
+        }
+        if (notNum(s) == true) {
+            token = processWord(s);
+        } else
+            token = processNumber(s);
+    }
+
+    private boolean notNum(String s) {
+        for (int i = 0; i < s.length(); i++) {
+            if (Character.isDigit(s.charAt(i)) == false) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public Token getToken() {
+
         return token;
+    }
+
+    public Token processWord(String s) {
+        Token f = new Token(s, line, pos);
+        return f;
+    }
+
+    public Token processNumber(String s) {
+        int v = Integer.valueOf(s);
+        Token f = new Token(v, line, pos);
+        return f;
+    }
+
+    public Token processNewLine() {
+        Token f = new Token(line, pos);
+        return f;
     }
 }
