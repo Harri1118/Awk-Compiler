@@ -1,6 +1,6 @@
 public class StringHandler {
     private String document;
-    private int index;
+    private int index = 0;
 
     public StringHandler(String s) {
         document = s;
@@ -20,10 +20,10 @@ public class StringHandler {
      */
     public String PeekString(int i) {
         String f = "";
-        while (Character.isSpaceChar(i) == false) {
-            i = i + 1;
+        for (int n = 0; n < i; n++) {
+            char c = document.charAt(index + n);
+            f = f + c;
         }
-        f = document.substring(index, i);
         return f;
     }
 
@@ -61,4 +61,7 @@ public class StringHandler {
         return document.substring(index, document.length());
     }
 
+    public int getPos() {
+        return index;
+    }
 }
