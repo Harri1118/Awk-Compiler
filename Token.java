@@ -16,24 +16,32 @@ public class Token {
     private String str;
     private int ln;
     private int charPos;
+    private String toString = "";
 
-    public Token(String s, int i, int p) {
+    public Token(String s, int l, int p) {
+        type = TokenType.WORD;
         str = s;
-        ln = i;
+        ln = l;
         charPos = p;
+        toString += "WORD(" + str + ")";
     }
 
-    public Token() {
+    public Token(int v, int l, int p) {
+        type = TokenType.NUMBER;
+        str = String.valueOf(v);
+        ln = l;
+        charPos = p;
+        toString += "NUMBER(" + str + ")";
+    }
+
+    public Token(int l, int p) {
         type = TokenType.SEPARATOR;
+        ln = l;
+        charPos = p;
+        toString += "SEPARATOR";
     }
 
     public String toString() {
-        String f = "(";
-        return "";
+        return toString;
     }
-
-    public String getString() {
-        return str;
-    }
-
 }
