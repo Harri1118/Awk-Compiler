@@ -8,11 +8,11 @@ public class Main {
             // Reads files with getAllBytes.
             Path myPath = Paths.get("test.awk");
             String content = new String(Files.readAllBytes(myPath));
-            System.out.println(content);
             // Calls Lex
             Lex translator = new Lex(0, 0, content);
             // Prints Tokens
-            System.out.println(translator.tokens);
+            for (int i = 0; i < translator.tokens.size(); i++)
+                System.out.println(translator.tokens.get(i).toString());
         } catch (IOException e) {
             e.printStackTrace();
         }
