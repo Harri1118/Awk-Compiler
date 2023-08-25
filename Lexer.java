@@ -2,26 +2,29 @@ import java.util.LinkedList;
 import java.lang.TypeNotPresentException;
 
 public class Lexer {
+    /*
+     * 
+     * Lex Exists, holds StringHandler, line number and position - Done
+     */
 
     // StringHandler initiated in this class. Used to parse through document and for
     // Lex to 'peek' through.
     public StringHandler document;
     // Line is inputted from lex into lexer to put into the Token object.
-    private int line;
+    private int line = 0;
     // Pos is inputted from lex into lexer to put into the Token object.
-    private int position;
+    private int position = 0;
 
-    public LinkedList<Token> tokens = new LinkedList<>();
+    private LinkedList<Token> tokens = new LinkedList<>();
 
     // Constrictor for Lexer. Takes a string, line, and position args in order to
     // properly configure the type of token and values for the token.
-    public Lexer(String s, int l, int p) {
+    public Lexer(String s) {
         document = new StringHandler(s);
-        line = l;
-        position = p;
     }
 
     public void Lex() {
+        try{
         // Controller
         boolean b = false;
 
@@ -41,7 +44,7 @@ public class Lexer {
             else if (c == 10) {
                 document.Swallow(1);
                 line++;
-                tokens.add(processNewLine());
+                tokens.add(processWord(String.valueOf(c)));
                 position++;
             }
             // If document.peek(i) isn't a space or a newline, it gets checked whether it is
@@ -57,7 +60,11 @@ public class Lexer {
 
             } else
                 throw new TypeNotPresentException(null, null);
+        }}
+        catch(Exception e){
+            System.out.println("Empty file!");
         }
+
     }
 
     // Checks if the incoming input from main is a number or not
@@ -83,12 +90,6 @@ public class Lexer {
         return f;
     }
 
-    // method called to create a Token of a separator type.
-    public Token processNewLine() {
-        Token f = new Token(line, position);
-        return f;
-    }
-
     public int getNextCharLen() {
         int i = 0;
         try {
@@ -103,5 +104,9 @@ public class Lexer {
             return i;
         }
 
+    }
+
+    public LinkedList<Token> getTokens(){
+        return tokens;
     }
 }
