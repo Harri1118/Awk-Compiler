@@ -64,8 +64,4 @@ public class StringHandler {
     public String Remainder() {
         return document.substring(index, document.length());
     }
-
-    public int getPos() {
-        return index;
-    }
 }
