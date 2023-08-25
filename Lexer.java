@@ -1,4 +1,5 @@
 import java.util.LinkedList;
+import java.lang.TypeNotPresentException;
 
 public class Lexer {
 
@@ -9,8 +10,6 @@ public class Lexer {
     private int line;
     // Pos is inputted from lex into lexer to put into the Token object.
     private int position;
-    // Token object which is to be returned.
-    private Token token;
 
     public LinkedList<Token> tokens = new LinkedList<>();
 
@@ -23,55 +22,52 @@ public class Lexer {
     }
 
     public void Lex() {
+        // Controller
         boolean b = false;
-        while (b == false) {
-            int i = 0;
-            char c = document.Peek(i);
-            while (document.Peek(i) != ' ' && document.Peek(i) != '\n') {
-                c = document.Peek(i);
-                i = i + 1;
 
-            }
-            if (document.Peek(i) == '\n' && i == 0) {
+        // While loop which parses StringHandler (document)
+        while (b == false) {
+            if (document.IsDone() == true)
+                break;
+            char c = document.Peek(0);
+
+            // Checks if i is a space (ASCII decimal value 32)
+            if (c == 32 || c == 9 || c == 11 || c == 13) {
                 document.Swallow(1);
                 position++;
+            }
+
+            // Checks if i is a newline (ASCII decimal value 10)
+            else if (c == 10) {
+                document.Swallow(1);
                 line++;
-                i++;
-            }
-            if (i == 0) {
-                document.Swallow(1);
+                tokens.add(processNewLine());
                 position++;
-            } else {
-                String w = document.PeekString(i);
+            }
+            // If document.peek(i) isn't a space or a newline, it gets checked whether it is
+            // a number or word.
+            else if (c > 32 && c < 127) {
+                String w = document.PeekString(getNextCharLen());
                 document.Swallow(w.length());
-                if (w.equals("\n")) {
-                    tokens.add(processNewLine());
-                }
                 if (notNum(w) == true) {
                     tokens.add(processWord(w));
                 } else
                     tokens.add(processNumber(w));
                 position = position + w.length();
-                if(document.IsDone() == true)
-                    b = true;
-            }
+
+            } else
+                throw new TypeNotPresentException(null, null);
         }
     }
 
     // Checks if the incoming input from main is a number or not
     private boolean notNum(String s) {
-        for (int i = 0; i < s.length(); i++) {
-            if (Character.isDigit(s.charAt(i)) == false) {
-                return true;
-            }
+        try {
+            Double.parseDouble(s);
+            return false;
+        } catch (Exception e) {
+            return true;
         }
-        return false;
-    }
-
-    // returns the token produced from the constructor
-    public Token getToken() {
-
-        return token;
     }
 
     // method called to create a Token of a word type.
@@ -82,7 +78,7 @@ public class Lexer {
 
     // method called to create a Token of a number type.
     public Token processNumber(String s) {
-        int v = Integer.valueOf(s);
+        double v = Double.valueOf(s);
         Token f = new Token(v, line, position);
         return f;
     }
@@ -93,4 +89,19 @@ public class Lexer {
         return f;
     }
 
+    public int getNextCharLen() {
+        int i = 0;
+        try {
+            // 'i' iterates by one each time a character is not decimal value 20 (based off
+            // raw ASCII characters)
+            while (document.Peek(i) > 32 && document.Peek(i) < 127)
+                i = i + 1;
+
+            return i;
+
+        } catch (Exception e) {
+            return i;
+        }
+
+    }
 }
