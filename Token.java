@@ -1,5 +1,5 @@
 public class Token {
-    
+
     // 2. Has String numbers
     // 3. Has line number
     // 4. Has start position
@@ -8,54 +8,75 @@ public class Token {
     // 7. All four (variables) are correct and private
 
     // Enum initiated with WORD, NUMBER, and SEPARATOR
-    enum TokenType {
+    public enum TokenType {
         WORD,
         NUMBER,
         SEPARATOR
     }
 
-    //Type used to specify enum type
+    // Type used to specify enum type
     private TokenType type;
 
-    //Holds string value
+    // Holds string value
     private String str;
 
-    //Holds line #
+    // Holds line #
     private int ln;
 
-    //Holds string position in text file
-    private int charPos;
+    // Holds string position in text file
+    private int pos;
 
-    private String toString = "";
-
-    //Constructor used for string type cases
+    // Constructor used for string type cases
     public Token(String s, int l, int p) {
         type = TokenType.WORD;
         str = s;
         ln = l;
-        charPos = p;
-        toString += "WORD(" + str + ")";
+        pos = p;
+
     }
 
-    //Constructor used for int type cases
-    public Token(int v, int l, int p) {
+    // Constructor used for int type cases
+    public Token(double v, int l, int p) {
         type = TokenType.NUMBER;
         str = String.valueOf(v);
+        if (str.charAt(str.length() - 1) == 48)
+            str = conv(str);
         ln = l;
-        charPos = p;
-        toString += "NUMBER(" + str + ")";
+        pos = p;
+
     }
 
-    //Constructor used for newLine type cases
+    // Constructor used for newLine type cases
     public Token(int l, int p) {
         type = TokenType.SEPARATOR;
         ln = l;
-        charPos = p;
-        toString += "SEPARATOR";
+        pos = p;
+
     }
 
-    //Shows what the file would look like as a toString
+    // Shows what the file would look like as a toString
     public String toString() {
-        return toString;
+        String f = "";
+        if (type == TokenType.WORD)
+            f += "WORD(";
+        else if (type == TokenType.NUMBER)
+            f += "NUMBER(";
+        else if (type == TokenType.SEPARATOR)
+            return "SEPARATOR";
+
+        return f + str + ")";
+    }
+
+    public String conv(String s) {
+        int l = s.length();
+        return s.substring(0, l - 2);
+    }
+
+    public int getLine() {
+        return ln;
+    }
+
+    public int getPos() {
+        return pos;
     }
 }
