@@ -1,11 +1,11 @@
 public class Token {
 
-    // 2. Has String numbers
-    // 3. Has line number
-    // 4. Has start position
-    // 5. Has both token constructors
-    // 6. toString() Exists and outputs type and value members clearly
-    // 7. All four (variables) are correct and private
+    // 2. Has String numbers ?
+    // 3. Has line number - Done
+    // 4. Has start position - Done
+    // 5. Has both token constructors - Done
+    // 6. toString() Exists and outputs type and value members clearly - Done
+    // 7. All four (variables) are correct and private - Done
 
     // Enum initiated with WORD, NUMBER, and SEPARATOR
     public enum TokenType {
@@ -24,14 +24,17 @@ public class Token {
     private int ln;
 
     // Holds string position in text file
-    private int pos;
+    private int startPos;
 
     // Constructor used for string type cases
     public Token(String s, int l, int p) {
-        type = TokenType.WORD;
+        if(s.charAt(0) == 10)
+            type = TokenType.SEPARATOR;
+        else
+            type = TokenType.WORD;
         str = s;
         ln = l;
-        pos = p;
+        startPos = p;
 
     }
 
@@ -42,15 +45,7 @@ public class Token {
         if (str.charAt(str.length() - 1) == 48)
             str = conv(str);
         ln = l;
-        pos = p;
-
-    }
-
-    // Constructor used for newLine type cases
-    public Token(int l, int p) {
-        type = TokenType.SEPARATOR;
-        ln = l;
-        pos = p;
+        startPos = p;
 
     }
 
@@ -76,7 +71,7 @@ public class Token {
         return ln;
     }
 
-    public int getPos() {
-        return pos;
+    public int getStartPos() {
+        return startPos;
     }
 }
