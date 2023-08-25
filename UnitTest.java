@@ -7,13 +7,6 @@ public class UnitTest {
 
     private Lexer lexer;
 
-    /*
-     * @Before
-     * public void setUp() {
-     * lexer = new Lexer("", 0, 0);
-     * }
-     */
-
     // Tests for empty cases
     @Test
     public void test0() {
