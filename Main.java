@@ -4,7 +4,7 @@ import java.nio.file.*;
 public class Main {
     public static void main(String[] args) {
         /*
-         * Exists - Done, reads file with GetAllBytes - Done?, calls lex, prints tokens (10) - Done
+         * Tries to run code, if it doesn't work it throws an exception.
          */
         try {
             // Reads files with getAllBytes.
