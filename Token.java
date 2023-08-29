@@ -1,14 +1,7 @@
 public class Token {
 
-    // 2. Has String numbers ?
-    // 3. Has line number - Done
-    // 4. Has start position - Done
-    // 5. Has both token constructors - Done
-    // 6. toString() Exists and outputs type and value members clearly - Done
-    // 7. All four (variables) are correct and private - Done
-
     // Enum initiated with WORD, NUMBER, and SEPARATOR
-    public enum TokenType {
+    private enum TokenType {
         WORD,
         NUMBER,
         SEPARATOR
@@ -28,7 +21,7 @@ public class Token {
 
     // Constructor used for string type cases
     public Token(String s, int l, int p) {
-        if(s.charAt(0) == 10)
+        if (s.charAt(0) == 10)
             type = TokenType.SEPARATOR;
         else
             type = TokenType.WORD;
@@ -62,15 +55,19 @@ public class Token {
         return f + str + ")";
     }
 
+    // Conf method returns a string which gets rid of the '.0' section of a string
+    // value when the number has no decimal.
     public String conv(String s) {
         int l = s.length();
         return s.substring(0, l - 2);
     }
 
+    // returns the line in which the variable is part of.
     public int getLine() {
         return ln;
     }
 
+    // returns the position in the document that the token started in.
     public int getStartPos() {
         return startPos;
     }
