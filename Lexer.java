@@ -44,8 +44,8 @@ public class Lexer {
                 // Checks if i is a newline (ASCII decimal value 10)
                 else if (c == 10) {
                     document.Swallow(1);
-                    line++;
                     tokens.add(processWord(String.valueOf(c)));
+                    line++;
                     position++;
                 }
                 // If document.peek(i) isn't a space or a newline, it gets checked whether it is
