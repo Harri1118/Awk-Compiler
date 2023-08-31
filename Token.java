@@ -13,6 +13,9 @@ public class Token {
     // Holds string value
     private String str;
 
+    // Holds numerical value
+    private double value;
+
     // Holds line #
     private int ln;
 
@@ -20,7 +23,7 @@ public class Token {
     private int startPos;
 
     // Constructor used for string type cases
-    public Token(String s, int l, int p) {
+    public Token(String s, int p, int l) {
         if (s.charAt(0) == 10)
             type = TokenType.SEPARATOR;
         else
@@ -32,8 +35,9 @@ public class Token {
     }
 
     // Constructor used for int type cases
-    public Token(double v, int l, int p) {
+    public Token(double v, int p, int l) {
         type = TokenType.NUMBER;
+        value = v;
         str = String.valueOf(v);
         if (str.charAt(str.length() - 1) == 48)
             str = conv(str);
