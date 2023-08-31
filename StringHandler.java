@@ -36,7 +36,7 @@ public class StringHandler {
      */
     public char GetChar() {
         index++;
-        return document.charAt(index);
+        return document.charAt(index-1);
     }
 
     /*
