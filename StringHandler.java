@@ -1,11 +1,11 @@
 public class StringHandler {
-    //Holds text file as string
+    // Holds text file as string
     private String document;
 
-    //index shows the position that has been parsed so far through the document.
+    // index shows the position that has been parsed so far through the document.
     private int index = 0;
 
-    //Constructor for StringHandler class
+    // Constructor for StringHandler class
     public StringHandler(String s) {
         document = s;
     }
@@ -36,7 +36,7 @@ public class StringHandler {
      */
     public char GetChar() {
         index++;
-        return document.charAt(index-1);
+        return document.charAt(index - 1);
     }
 
     /*
