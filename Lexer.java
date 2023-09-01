@@ -6,11 +6,11 @@ public class Lexer {
     private StringHandler document;
 
     // line variable used to count the amount of lines from document.
-    private int line = 0;
+    private int line = 1;
 
     // Position tracks the location of the pointer while parsing through
     // StringHandler. Will be used for tokenizing.
-    private int position = 0;
+    private int position = 1;
 
     // LinkedList for the tokens to be stored.
     private LinkedList<Token> tokens = new LinkedList<>();
