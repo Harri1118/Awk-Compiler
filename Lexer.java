@@ -44,7 +44,7 @@ public class Lexer {
                 }
                 // Checks if 'c' is a separator. Adds a separator token to tokens. Adds 1 to
                 // line, 1 to position, and the document swallows by 1.
-                else if (c == 10) {
+                else if (c == '\n') {
                     tokens.add(new Token(String.valueOf(c), position, line));
                     position++;
                     document.Swallow(1);
