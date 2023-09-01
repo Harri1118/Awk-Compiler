@@ -50,22 +50,29 @@ public class Lexer {
                     document.Swallow(1);
                     line++;
                 }
-                // If 'c' isn't recognized by any of these, it will be ignored and the document
-                // swallows 1 and position adds by 1.
-                else {
+                // Checks if the character is white space (space bar, non newline characters,
+                // etc. Will ignore these characters)
+                else if (Character.isWhitespace(c)) {
                     document.Swallow(1);
                     position++;
                 }
+                // If 'c' isn't recognized by any of these, it will throw an unrecognized
+                // character exception. Will specify the line and position where the error
+                // occured.
+                else {
+                    throw new Error("Not a recognized character at line: " + line + ", position " + position);
+                }
             }
         }
-        // If Lex() doesn't work (for whatever reason) it prints 'invalid file', and
-        // tells the line and position where the error occured.
+        // If Lex() doesn't work (for whatever reason) it prints the error
+        // that was thrown.
         catch (Exception e) {
-            System.out.println("Invalid file! Error at line " + line + ", and at position " + position);
+            System.out.println(e.getMessage());
         }
     }
 
-    // processWord() collects word characters until there is no more an alphabetic char.
+    // processWord() collects word characters until there is no more an alphabetic
+    // char.
     public void processWord() {
         // buffer used for adding all numbers into a string.
         String buffer = "";
@@ -101,7 +108,7 @@ public class Lexer {
             buffer += c;
             // 'throws an error if c is a decimal and point is already found'.
             if (c == '.' && foundPoint == true)
-                throw new Error("Not a valid number!");
+                throw new Error("Not a valid number at line " + line);
             // if c is '.' foundPoint is true.
             else if (c == '.')
                 foundPoint = true;
