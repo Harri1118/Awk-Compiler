@@ -1,8 +1,9 @@
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThrows;
 
 import org.junit.Test;
 
-public class UnitTest {
+public class UnitTests {
 
     private Lexer lexer;
 
@@ -57,7 +58,7 @@ public class UnitTest {
         assertEquals(5, lexer.getTokens().get(1).getStartPos());
     }
 
-    //Tests for word and number, then number and word.
+    // Tests for word and number, then number and word.
     @Test
     public void test5() {
         lexer = new Lexer("5 test\ntest 5");
@@ -67,26 +68,19 @@ public class UnitTest {
         assertEquals(1, lexer.getTokens().get(4).getLine());
     }
 
-    //Test adds numbers separated by a symbol.
+    // Test checks to see if speical characters are rooted out during errors.
     @Test
-    public void test6(){
+    public void test6() {
         lexer = new Lexer("13+12\n");
-        lexer.Lex();
-        assertEquals("[NUMBER(13), NUMBER(12), SEPARATOR]", lexer.getTokens().toString());
+        Error exception = assertThrows(Error.class, () -> lexer.Lex());
+        assertEquals("Not a recognized character at line: 0, position 2", exception.getMessage());
     }
 
-    //Test adds decimals and tests if it detects a number with .1
+    // This test checks to see if invalid numbers are thrown as exceptions.
     @Test
-    public void test7(){
-        lexer = new Lexer(".5\n1.25+555");
-        lexer.Lex();
-        assertEquals("[NUMBER(0.5), SEPARATOR, NUMBER(1.25), NUMBER(555)]", lexer.getTokens().toString());
-    }
-
-    @Test
-    public void test8(){
-        lexer = new Lexer(".5.0");
-        lexer.Lex();
-        
+    public void test7() {
+        lexer = new Lexer(".5.0 6.6.6");
+        Error exception = assertThrows(Error.class, () -> lexer.Lex());
+        assertEquals("Not a valid number at line 0", exception.getMessage());
     }
 }
