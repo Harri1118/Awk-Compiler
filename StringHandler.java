@@ -3,7 +3,7 @@ public class StringHandler {
     private String document;
 
     // index shows the position that has been parsed so far through the document.
-    private int index = 0;
+    private int index = 1;
 
     // Constructor for StringHandler class
     public StringHandler(String s) {
@@ -15,7 +15,7 @@ public class StringHandler {
      * move the index
      */
     public char Peek(int i) {
-        return document.charAt(index + i);
+        return document.charAt(index + i -1);
     }
 
     /*
@@ -36,7 +36,7 @@ public class StringHandler {
      */
     public char GetChar() {
         index++;
-        return document.charAt(index - 1);
+        return document.charAt(index - 2);
     }
 
     /*
@@ -51,7 +51,7 @@ public class StringHandler {
      */
     public boolean IsDone() {
         try {
-            document.charAt(index);
+            document.charAt(index-1);
         } catch (Exception e) {
             return true;
         }
