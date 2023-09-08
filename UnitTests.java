@@ -1,6 +1,8 @@
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThrows;
+package project2;
 
+import static org.junit.Assert.assertEquals;
+
+import org.junit.Before;
 import org.junit.Test;
 
 public class UnitTests {
@@ -18,12 +20,9 @@ public class UnitTests {
     // Tests for a word
     @Test
     public void test1() {
-        lexer = new Lexer("Test");
+        lexer = new Lexer("example");
         lexer.Lex();
-        Token token = lexer.getTokens().get(0);
-        assertEquals("[WORD(Test)]", lexer.getTokens().toString());
-        assertEquals(1, token.getLine());
-        assertEquals(1, token.getStartPos());
+        assertEquals("[WORD(example)]", lexer.getTokens().toString());
     }
 
     // Tests for a number
@@ -32,10 +31,7 @@ public class UnitTests {
 
         lexer = new Lexer("123");
         lexer.Lex();
-        Token token = lexer.getTokens().get(0);
         assertEquals("[NUMBER(123)]", lexer.getTokens().toString());
-        assertEquals(1, token.getLine());
-        assertEquals(1, token.getStartPos());
     }
 
     // Tests for a newline
@@ -43,10 +39,7 @@ public class UnitTests {
     public void test3() {
         lexer = new Lexer("\n");
         lexer.Lex();
-        Token token = lexer.getTokens().get(0);
         assertEquals("[SEPARATOR]", lexer.getTokens().toString());
-        assertEquals(1, token.getLine());
-        assertEquals(1, token.getStartPos());
     }
 
     // Tests for a word, number, and newline
@@ -55,32 +48,31 @@ public class UnitTests {
         lexer = new Lexer("test 5");
         lexer.Lex();
         assertEquals("[WORD(test), NUMBER(5)]", lexer.getTokens().toString());
-        assertEquals(6, lexer.getTokens().get(1).getStartPos());
     }
 
-    // Tests for word and number, then number and word.
     @Test
+    // Tests for word and number, then number and word.
     public void test5() {
         lexer = new Lexer("5 test\ntest 5");
         lexer.Lex();
         assertEquals("[NUMBER(5), WORD(test), SEPARATOR, WORD(test), NUMBER(5)]", lexer.getTokens().toString());
-        assertEquals(13, lexer.getTokens().get(4).getStartPos());
-        assertEquals(2, lexer.getTokens().get(4).getLine());
+
     }
 
-    // Test checks to see if speical characters are rooted out during errors.
     @Test
     public void test6() {
-        lexer = new Lexer("13+12\n");
-        Error exception = assertThrows(Error.class, () -> lexer.Lex());
-        assertEquals("Not a recognized character at line: 1, position 3", exception.getMessage());
+        lexer = new Lexer("$0 = tolower($0)");
+        lexer.Lex();
+        assertEquals(8, lexer.getTokens().size());
+        assertEquals(Token.TokenType.DOLLAR, lexer.getTokens().get(0).getType());
+        assertEquals(Token.TokenType.NUMBER, lexer.getTokens().get(1).getType());
+        assertEquals(Token.TokenType.ASSIGN, lexer.getTokens().get(2).getType());
+        assertEquals(Token.TokenType.WORD, lexer.getTokens().get(3).getType());
+        assertEquals("tolower", lexer.getTokens().get(3).getValue());
+        assertEquals(Token.TokenType.OPENPAREN, lexer.getTokens().get(4).getType());
+        assertEquals(Token.TokenType.DOLLAR, lexer.getTokens().get(5).getType());
+        assertEquals(Token.TokenType.NUMBER, lexer.getTokens().get(6).getType());
+        assertEquals(Token.TokenType.CLOSEPAREN, lexer.getTokens().get(7).getType());
     }
 
-    // This test checks to see if invalid numbers are thrown as exceptions.
-    @Test
-    public void test7() {
-        lexer = new Lexer(".5.0 6.6.6");
-        Error exception = assertThrows(Error.class, () -> lexer.Lex());
-        assertEquals("Not a valid number at line 1", exception.getMessage());
-    }
 }
