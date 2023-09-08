@@ -1,9 +1,11 @@
+package project2;
+
 public class StringHandler {
     // Holds text file as string
     private String document;
 
     // index shows the position that has been parsed so far through the document.
-    private int index = 1;
+    private int index = 0;
 
     // Constructor for StringHandler class
     public StringHandler(String s) {
@@ -11,35 +13,43 @@ public class StringHandler {
     }
 
     /*
+     * 
      * char Peek(i) -looks “i” characters ahead and returns that character; doesn’t
      * move the index
      */
     public char Peek(int i) {
-        return document.charAt(index + i -1);
+        return document.charAt(index + i);
     }
 
     /*
+     * 
      * String PeekString(i) – returns a string of the next “i” characters but
      * doesn’t move the index
      */
     public String PeekString(int i) {
-        String f = "";
-        for (int n = 0; n < i; n++) {
-            char c = document.charAt(index + n);
-            f = f + c;
+        try {
+            String f = "";
+            for (int n = 0; n < i; n++) {
+                char c = document.charAt(index + n);
+                f = f + c;
+            }
+            return f;
+        } catch (Exception e) {
+            return "";
         }
-        return f;
     }
 
     /*
+     * 
      * char GetChar() – returns the next character and moves the index
      */
     public char GetChar() {
         index++;
-        return document.charAt(index - 2);
+        return document.charAt(index - 1);
     }
 
     /*
+     * 
      * void Swallow(i) – moves the index ahead “i” positions
      */
     public void Swallow(int i) {
@@ -47,11 +57,12 @@ public class StringHandler {
     }
 
     /*
+     * 
      * boolean IsDone() – returns true if we are at the end of the document
      */
     public boolean IsDone() {
         try {
-            document.charAt(index-1);
+            document.charAt(index);
         } catch (Exception e) {
             return true;
         }
@@ -59,6 +70,7 @@ public class StringHandler {
     }
 
     /*
+     * 
      * String Remainder() – returns the rest of the document as a string
      */
     public String Remainder() {
