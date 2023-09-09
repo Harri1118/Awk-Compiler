@@ -14,6 +14,7 @@ public class Token {
         WORD,
         NUMBER,
         SEPARATOR,
+        WHILE,
         IF,
         DO,
         FOR,
@@ -28,11 +29,16 @@ public class Token {
         NEXT,
         IN,
         DELETE,
-        WHILE,
+        GETLINE,
+        EXIT,
+        NEXTFILE,
+        FUNCTION,
         STRINGLITERAL,
         // Single character types
         OPBRAC,
         CLBRAC,
+        SQOPBRAC,
+        SQCLBRAC,
         OPENPAREN,
         CLOSEPAREN,
         DOLLAR,
@@ -56,7 +62,7 @@ public class Token {
         ADD,
         SUBT,
         LEEQ,
-        EQUAL,
+        EQUALS,
         NEQ,
         CAREQ,
         PEREQ,
@@ -64,7 +70,7 @@ public class Token {
         DIVEQ,
         PLEQ,
         MINEQ,
-        NOTSQUIG,
+        REGEXP,
         AND,
         LEADS,
         OR
@@ -97,23 +103,14 @@ public class Token {
 
     }
 
-    // Constructor used for int type cases
-    public Token(double v, int p, int l) {
-        type = TokenType.NUMBER;
-        str = String.valueOf(v);
-        value = v;
-        if (str.charAt(str.length() - 1) == 48)
-            str = conv(str);
-        ln = l;
-        startPos = p;
-
-    }
-
     public Token(TokenType t, String s, int p, int l) {
         type = t;
         ln = l;
         startPos = p;
         str = s;
+        if (t == TokenType.NUMBER) {
+            value = Double.valueOf(s);
+        }
     }
 
     // Shows what the file would look like as a toString
@@ -131,11 +128,6 @@ public class Token {
             return String.valueOf(type);
 
         return f + str + ")";
-    }
-
-    public String conv(String s) {
-        int l = s.length();
-        return s.substring(0, l - 2);
     }
 
     public int getLine() {
