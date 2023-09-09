@@ -1,3 +1,5 @@
+package project2;
+
 import java.util.HashMap;
 import java.util.LinkedList;
 
@@ -13,7 +15,7 @@ public class Lexer {
 
     // Position tracks the location of the pointer while parsing through
     // StringHandler. Will be used for tokenizing.
-    private int position = 1;
+    private int position = 0;
 
     private HashMap<String, TokenType> Ophashes = new HashMap<String, TokenType>();
     private HashMap<String, TokenType> boolHashes = new HashMap<String, TokenType>();
@@ -58,11 +60,8 @@ public class Lexer {
                 else if (c == '"')
                     handleStringLiteral();
 
-                else if (boolHashes.containsKey(document.PeekString(2)))
-                    processSymbol(2);
-
                 else if (charHashes.containsKey(c))
-                    processSymbol(1);
+                    processSymbol();
                 // Checks if the character is white space (space bar, non newline characters,
                 // etc. Will ignore these characters)
                 else if (Character.isWhitespace(c)) {
@@ -72,14 +71,14 @@ public class Lexer {
                 // If 'c' isn't recognized by any of these, it will be ignored and the document
                 // swallows 1 and position adds by 1.
                 else {
-                    throw new Error("Not a recognized character at line: " + line + ", position " + position);
+                    throw new Exception("Not a recognized character at line: " + line);
                 }
             }
         }
         // If Lex() doesn't work (for whatever reason) it prints 'invalid file', and
         // tells the line and position where the error occured.
         catch (Exception e) {
-            System.out.println("Invalid file! Error at line " + line + ", and at position " + position);
+            System.out.println("Invalid file! Error at line " + line);
         }
     }
 
@@ -128,22 +127,41 @@ public class Lexer {
                 foundPoint = true;
         }
         // number finally added to tokens.
-        tokens.add(new Token(Double.parseDouble(buffer), position, line));
+        tokens.add(new Token(TokenType.NUMBER, buffer, position, line));
         // position increments after Token is added.
         position += buffer.length();
     }
 
-    public void processSymbol(int i) {
-        if (i == 2) {
-            tokens.add(new Token(boolHashes.get(document.PeekString(2)), document.PeekString(2), position, line));
-            document.Swallow(2);
-            position += 2;
-        } else if (i == 1) {
-            tokens.add(new Token(charHashes.get(document.Peek(0)), String.valueOf(document.Peek(0)), position, line));
-            document.Swallow(1);
-            position++;
-        } else
-            throw new Error("processSymbol not being used correctly at line " + line + ", position " + position);
+    public void processSymbol() {
+        try{
+            //Check if next two chars are double symbol value
+            String s = document.PeekString(2);
+            if(boolHashes.containsKey(s)){
+                tokens.add(new Token(boolHashes.get(s), s, position, line));
+                position += 2;
+                document.Swallow(2);
+            }
+            else
+                throw new Exception();
+        }
+        catch(Exception e){ 
+            if(charHashes.containsKey(document.Peek(0))){
+                char c = document.Peek(0);
+                if(c == '&')
+                    throw new Error("cannot have single character '&'!");
+                tokens.add(new Token(charHashes.get(c), String.valueOf(c), position, line));
+                position++;
+                document.Swallow(1);
+                if (c == '\n' || c == ';')
+                    line++;
+            }
+            
+            else{
+                position++;
+                document.Swallow(1);
+            }
+            //Check if symbol is single character
+        }
     }
 
     public void commentState() {
@@ -157,24 +175,34 @@ public class Lexer {
     }
 
     public void handleStringLiteral() {
+        
         String buffer = "";
         document.Swallow(1);
         position++;
-        int count = 0;
+        int countQuotes = 0;
         while (document.Peek(0) != '"') {
             char c = document.GetChar();
-            if (c == '\\' && document.Peek(0) == '`') {
+            if (c == '\\' && document.Peek(0) == '"') {
                 position++;
                 buffer += c;
                 document.Swallow(1);
-                buffer = HandlePattern(buffer + '`');
+                buffer = HandlePattern(buffer + '"');
+                countQuotes++;
             } else
                 buffer += c;
         }
-
+        checkEven(countQuotes);
         document.Swallow(1);
         position += buffer.length() + 2;
         tokens.add(new Token(TokenType.STRINGLITERAL, buffer, position, line));
+    
+    
+
+}
+
+    public void checkEven(int i){
+        if(i != 2)
+            throw new Error("Must have an even number of quotes in a string literal!");
     }
 
     public String HandlePattern(String s) {
@@ -182,6 +210,7 @@ public class Lexer {
     }
 
     public void setStatements() {
+        Ophashes.put("while", TokenType.WHILE);
         Ophashes.put("if", TokenType.IF);
         Ophashes.put("do", TokenType.DO);
         Ophashes.put("for", TokenType.FOR);
@@ -196,12 +225,18 @@ public class Lexer {
         Ophashes.put("next", TokenType.NEXT);
         Ophashes.put("in", TokenType.IN);
         Ophashes.put("delete", TokenType.DELETE);
-        Ophashes.put("while", TokenType.WHILE);
+        Ophashes.put("getline", TokenType.GETLINE);
+        Ophashes.put("exit", TokenType.EXIT);
+        Ophashes.put("nextfile", TokenType.NEXTFILE);
+        Ophashes.put("function", TokenType.FUNCTION);
+
     }
 
     public void setSingleChar() {
         charHashes.put('{', TokenType.OPBRAC);
         charHashes.put('}', TokenType.CLBRAC);
+        charHashes.put('[', TokenType.SQOPBRAC);
+        charHashes.put(']', TokenType.SQCLBRAC);
         charHashes.put('(', TokenType.OPENPAREN);
         charHashes.put(')', TokenType.CLOSEPAREN);
         charHashes.put('$', TokenType.DOLLAR);
@@ -222,14 +257,14 @@ public class Lexer {
         charHashes.put('\n', TokenType.SEPARATOR);
         charHashes.put('|', TokenType.VERTBAR);
         charHashes.put(',', TokenType.COMMA);
+        charHashes.put('&', null);
     }
-
     public void setDoubleChars() {
         boolHashes.put(">=", TokenType.GREQ);
         boolHashes.put("++", TokenType.ADD);
         boolHashes.put("--", TokenType.SUBT);
         boolHashes.put("<=", TokenType.LEEQ);
-        boolHashes.put("==", TokenType.EQUAL);
+        boolHashes.put("==", TokenType.EQUALS);
         boolHashes.put("!=", TokenType.NEQ);
         boolHashes.put("^=", TokenType.CAREQ);
         boolHashes.put("%=", TokenType.PEREQ);
@@ -237,7 +272,7 @@ public class Lexer {
         boolHashes.put("/=", TokenType.DIVEQ);
         boolHashes.put("+=", TokenType.PLEQ);
         boolHashes.put("-=", TokenType.MINEQ);
-        boolHashes.put("!~", TokenType.NOTSQUIG);
+        boolHashes.put("!~", TokenType.REGEXP);
         boolHashes.put("&&", TokenType.AND);
         boolHashes.put(">>", TokenType.LEADS);
         boolHashes.put("||", TokenType.OR);
