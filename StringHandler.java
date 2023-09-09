@@ -6,14 +6,14 @@ public class StringHandler {
 
     // index shows the position that has been parsed so far through the document.
     private int index = 0;
-
+    private int size;
     // Constructor for StringHandler class
     public StringHandler(String s) {
         document = s;
-    }
+        size = s.length();
+    }   
 
     /*
-     * 
      * char Peek(i) -looks “i” characters ahead and returns that character; doesn’t
      * move the index
      */
@@ -22,25 +22,19 @@ public class StringHandler {
     }
 
     /*
-     * 
      * String PeekString(i) – returns a string of the next “i” characters but
      * doesn’t move the index
      */
     public String PeekString(int i) {
-        try {
-            String f = "";
-            for (int n = 0; n < i; n++) {
-                char c = document.charAt(index + n);
-                f = f + c;
-            }
-            return f;
-        } catch (Exception e) {
-            return "";
+        String f = "";
+        for (int n = 0; n < i; n++) {
+            char c = document.charAt(index + n);
+            f = f + c;
         }
+        return f;
     }
 
     /*
-     * 
      * char GetChar() – returns the next character and moves the index
      */
     public char GetChar() {
@@ -49,7 +43,6 @@ public class StringHandler {
     }
 
     /*
-     * 
      * void Swallow(i) – moves the index ahead “i” positions
      */
     public void Swallow(int i) {
@@ -57,7 +50,6 @@ public class StringHandler {
     }
 
     /*
-     * 
      * boolean IsDone() – returns true if we are at the end of the document
      */
     public boolean IsDone() {
@@ -70,10 +62,13 @@ public class StringHandler {
     }
 
     /*
-     * 
      * String Remainder() – returns the rest of the document as a string
      */
     public String Remainder() {
         return document.substring(index, document.length());
+    }
+
+    public int getLength(){
+        return size;
     }
 }
