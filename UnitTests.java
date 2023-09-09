@@ -2,10 +2,12 @@ package project2;
 
 import static org.junit.Assert.assertEquals;
 
+import java.beans.Transient;
+
 import org.junit.Before;
 import org.junit.Test;
 
-public class UnitTests {
+public class UnitTest {
 
     private Lexer lexer;
 
@@ -75,4 +77,30 @@ public class UnitTests {
         assertEquals(Token.TokenType.CLOSEPAREN, lexer.getTokens().get(7).getType());
     }
 
+    @Test
+    public void test7(){
+        lexer = new Lexer("while if do for break continue else return BEGIN END print printf next in delete getline exit nextfile function");
+        assertEquals(19, lexer.getTokens().size());
+
+    }
+
+    @Test
+    public void test8(){
+        lexer = new Lexer("BEGIN {old_word=\"apple\"; new_word=\"orange\"} {gsub(old_word, new_word); print}");
+    }
+
+    @Test
+    public void test9(){
+        lexer = new Lexer("BEGIN {max_length=0; longest_line=\"\"} {if(length>max_length){max_length=length;longest_line=$0}} END {print \"Longest line:\", longest_line}");
+    }
+
+    @Test
+    public void test10(){
+        lexer = new Lexer("{for(i=1;i<=NF;i++){word=$i;word_count[word]++}} END {for(word in word_count){print \"Word:\",word,\"Count:\",word_count[word]}}");
+    }
+
+    @Transient
+    public void test11(){
+        lexer = new Lexer("BEGIN {FS=\",\"; total=0; count=0} {for(i=1;i<=NF;i++){total+=$i;count++}} END {if(count>0){average=total/count;print \"Average:\",average}else{print \"No numbers found.\"}}");
+    }
 }
