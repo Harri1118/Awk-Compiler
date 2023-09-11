@@ -24,7 +24,7 @@ public class Lexer {
     // LinkedList for the tokens to be stored.
     private LinkedList<Token> tokens = new LinkedList<>();
 
-    // Constrictor for Lexer. Takes a string for document to utilize.
+    // Constrictor for Lexer. Takes a string for document to utilize. Sets statements, operands, and operators to TokenTypes when parsing through awk file.
     public Lexer(String s) {
         document = new StringHandler(s);
         setStatements();
@@ -53,13 +53,13 @@ public class Lexer {
                 // Checks if 'c' is alphabetic. Calls processWord() and changes state.
                 else if (Character.isAlphabetic(c))
                     processWord();
-
+                // Checks if s is in a '#'. Will skip over line until next line.
                 else if (c == '#')
                     commentState();
-
+                // Checks if s is a quotation mark. Will handle as a string literal if this is the case.
                 else if (c == '"')
                     handleStringLiteral();
-
+                // Checks if character is an operand, goes into processSymbol() state if so.
                 else if (charHashes.containsKey(c))
                     processSymbol();
                 // Checks if the character is white space (space bar, non newline characters,
@@ -84,7 +84,7 @@ public class Lexer {
 
     // processWord() collects word characters until there is no more an alphabetic
     // char.
-    public void processWord() {
+    private void processWord() {
         // buffer used for adding all numbers into a string.
         String buffer = "";
         // while loop checks if the document is finished, as well as if the character is
@@ -96,6 +96,7 @@ public class Lexer {
             // 'c' added to buffer.
             buffer += c;
         }
+        // Checks if buffer is a statement. Adds it as a token if so.
         if (Ophashes.containsKey(buffer))
             tokens.add(new Token(Ophashes.get(buffer), buffer, position, line));
         else
@@ -106,7 +107,7 @@ public class Lexer {
 
     // processNumber() to check the number line by line until it can derive a valid
     // double value.
-    public void processNumber() {
+    private void processNumber() {
         // foundPoint initialized to check if there's one decimal in the number.
         boolean foundPoint = false;
         // buffer used for adding all numbers into a string.
@@ -132,40 +133,52 @@ public class Lexer {
         position += buffer.length();
     }
 
-    public void processSymbol() {
+    // processSymbol state adds operand/operator tokens.
+    private void processSymbol() {
+        // Tries to check if the next two characters are a valid operator. If not then it will throw an exception
         try{
-            //Check if next two chars are double symbol value
+            // s is a string which is initiated from PeekString.
             String s = document.PeekString(2);
+            // Checks if string is a operator. Adds the token and changes position/document index.
             if(boolHashes.containsKey(s)){
                 tokens.add(new Token(boolHashes.get(s), s, position, line));
                 position += 2;
                 document.Swallow(2);
             }
+            // Throw an exception if not an operator
             else
                 throw new Exception();
         }
-        catch(Exception e){ 
+        // catch statement catches an exception. Used for cases when operands are a single character.
+        catch(Exception e){
+            // Checks if next character is a valid operand
             if(charHashes.containsKey(document.Peek(0))){
+                // char c initiated to equal the next character.
                 char c = document.Peek(0);
+                // Checks if c is a '&'. If so, throw an immediate error
                 if(c == '&')
                     throw new Error("cannot have single character '&'!");
+                // Add single character operand to tokens if no error is thrown.
                 tokens.add(new Token(charHashes.get(c), String.valueOf(c), position, line));
+                // Add position and swallow, add one to line if c is newline or semicolon
                 position++;
                 document.Swallow(1);
                 if (c == '\n' || c == ';')
                     line++;
             }
-            
+                // Change positions if c is not a recognized character
             else{
                 position++;
                 document.Swallow(1);
             }
-            //Check if symbol is single character
+            
         }
     }
 
-    public void commentState() {
-        while (document.GetChar() != 10) {
+    // Comment state method
+    private void commentState() {
+        // Checks if the char is a separator. For cases when it hits the end of the document, the method breaks. Adds position and line.
+        while (isSeparator(document.GetChar())) {
             if (document.IsDone())
                 break;
             position++;
@@ -174,42 +187,57 @@ public class Lexer {
         line++;
     }
 
-    public void handleStringLiteral() {
-        
+    // isSeparator checks if the input 'c' is a newline or semicolon.
+    private boolean isSeparator(char c){
+        return c == '\n' || c == ';';
+    }
+
+    // handleStringLiteral State method
+    private void handleStringLiteral() {
+        // Buffer initiated to parse through document.
         String buffer = "";
+        // Skip quote when iterated over.
         document.Swallow(1);
         position++;
+        // variable countQuotes in case of throwing errors.
         int countQuotes = 0;
+        // While loop to peek through document, will check as long as the next char isn't a quotation mark.
         while (document.Peek(0) != '"') {
+            // c initiated as the next char.
             char c = document.GetChar();
+            // if c is a backslash, check if next character is a quote. Adds to buffer and position is added as well. countQuotes is incremented.
             if (c == '\\' && document.Peek(0) == '"') {
                 position++;
                 buffer += c;
                 document.Swallow(1);
                 buffer = HandlePattern(buffer + '"');
                 countQuotes++;
-            } else
+            } 
+            // else, add 'c' to buffer
+            else
                 buffer += c;
         }
+        // Checks if countQuotes is even. Will return an error if number of quotes in stringliteral is uneven
         checkEven(countQuotes);
+        // Increment positions. Add buffer to tokens.
         document.Swallow(1);
         position += buffer.length() + 2;
         tokens.add(new Token(TokenType.STRINGLITERAL, buffer, position, line));
-    
-    
-
 }
 
-    public void checkEven(int i){
-        if(i != 2)
+    // Checks if i is even, meant for use cases when there is a quote in a string literal.
+    private void checkEven(int i){
+        if(i % 2 != 0)
             throw new Error("Must have an even number of quotes in a string literal!");
     }
 
-    public String HandlePattern(String s) {
+    // HandlePattern initiated to mutate a stringliteral. Changes all strings '\"' to just "\".
+    private String HandlePattern(String s) {
         return s.substring(0, s.length() - 2) + "\"";
     }
 
-    public void setStatements() {
+    // setStatements() used for setting statements to tokens.
+    private void setStatements() {
         Ophashes.put("while", TokenType.WHILE);
         Ophashes.put("if", TokenType.IF);
         Ophashes.put("do", TokenType.DO);
@@ -232,7 +260,8 @@ public class Lexer {
 
     }
 
-    public void setSingleChar() {
+    // setSingleChar used for setting single characters to tokens.
+    private void setSingleChar() {
         charHashes.put('{', TokenType.OPBRAC);
         charHashes.put('}', TokenType.CLBRAC);
         charHashes.put('[', TokenType.SQOPBRAC);
@@ -259,7 +288,9 @@ public class Lexer {
         charHashes.put(',', TokenType.COMMA);
         charHashes.put('&', null);
     }
-    public void setDoubleChars() {
+
+    // setDoubleChars used for setting double characters to tokens.
+    private void setDoubleChars() {
         boolHashes.put(">=", TokenType.GREQ);
         boolHashes.put("++", TokenType.ADD);
         boolHashes.put("--", TokenType.SUBT);
@@ -268,7 +299,7 @@ public class Lexer {
         boolHashes.put("!=", TokenType.NEQ);
         boolHashes.put("^=", TokenType.CAREQ);
         boolHashes.put("%=", TokenType.PEREQ);
-        boolHashes.put("*=", TokenType.MEQ);
+        boolHashes.put("*=", TokenType.TIEQ);
         boolHashes.put("/=", TokenType.DIVEQ);
         boolHashes.put("+=", TokenType.PLEQ);
         boolHashes.put("-=", TokenType.MINEQ);
