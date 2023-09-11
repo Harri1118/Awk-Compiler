@@ -66,7 +66,7 @@ public class Token {
         NEQ,
         CAREQ,
         PEREQ,
-        MEQ,
+        TIEQ,
         DIVEQ,
         PLEQ,
         MINEQ,
