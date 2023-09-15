@@ -1,9 +1,9 @@
-package project2;
+package icsi311;
 
 import java.util.HashMap;
 import java.util.LinkedList;
 
-import project2.Token.TokenType;
+import icsi311.Token.TokenType;
 
 public class Lexer {
     // StringHandler initiated in this class. Used to parse through document and for
@@ -24,7 +24,9 @@ public class Lexer {
     // LinkedList for the tokens to be stored.
     private LinkedList<Token> tokens = new LinkedList<>();
 
-    // Constrictor for Lexer. Takes a string for document to utilize. Sets statements, operands, and operators to TokenTypes when parsing through awk file.
+    // Constrictor for Lexer. Takes a string for document to utilize. Sets
+    // statements, operands, and operators to TokenTypes when parsing through awk
+    // file.
     public Lexer(String s) {
         document = new StringHandler(s);
         setStatements();
@@ -56,7 +58,8 @@ public class Lexer {
                 // Checks if s is in a '#'. Will skip over line until next line.
                 else if (c == '#')
                     commentState();
-                // Checks if s is a quotation mark. Will handle as a string literal if this is the case.
+                // Checks if s is a quotation mark. Will handle as a string literal if this is
+                // the case.
                 else if (c == '"')
                     handleStringLiteral();
                 // Checks if character is an operand, goes into processSymbol() state if so.
@@ -135,12 +138,14 @@ public class Lexer {
 
     // processSymbol state adds operand/operator tokens.
     private void processSymbol() {
-        // Tries to check if the next two characters are a valid operator. If not then it will throw an exception
-        try{
+        // Tries to check if the next two characters are a valid operator. If not then
+        // it will throw an exception
+        try {
             // s is a string which is initiated from PeekString.
             String s = document.PeekString(2);
-            // Checks if string is a operator. Adds the token and changes position/document index.
-            if(boolHashes.containsKey(s)){
+            // Checks if string is a operator. Adds the token and changes position/document
+            // index.
+            if (boolHashes.containsKey(s)) {
                 tokens.add(new Token(boolHashes.get(s), s, position, line));
                 position += 2;
                 document.Swallow(2);
@@ -149,14 +154,15 @@ public class Lexer {
             else
                 throw new Exception();
         }
-        // catch statement catches an exception. Used for cases when operands are a single character.
-        catch(Exception e){
+        // catch statement catches an exception. Used for cases when operands are a
+        // single character.
+        catch (Exception e) {
             // Checks if next character is a valid operand
-            if(charHashes.containsKey(document.Peek(0))){
+            if (charHashes.containsKey(document.Peek(0))) {
                 // char c initiated to equal the next character.
                 char c = document.Peek(0);
                 // Checks if c is a '&'. If so, throw an immediate error
-                if(c == '&')
+                if (c == '&')
                     throw new Error("cannot have single character '&'!");
                 // Add single character operand to tokens if no error is thrown.
                 tokens.add(new Token(charHashes.get(c), String.valueOf(c), position, line));
@@ -166,29 +172,32 @@ public class Lexer {
                 if (c == '\n' || c == ';')
                     line++;
             }
-                // Change positions if c is not a recognized character
-            else{
+            // Change positions if c is not a recognized character
+            else {
                 position++;
                 document.Swallow(1);
             }
-            
+
         }
     }
 
     // Comment state method
     private void commentState() {
-        // Checks if the char is a separator. For cases when it hits the end of the document, the method breaks. Adds position and line.
+        // Checks if the char is a separator. For cases when it hits the end of the
+        // document, the method breaks. Adds position and line.
         while (isSeparator(document.GetChar())) {
             if (document.IsDone())
                 break;
             position++;
         }
-
+        // Adds separator token.
+        tokens.add(new Token("\n", position, line));
+        position++;
         line++;
     }
 
     // isSeparator checks if the input 'c' is a newline or semicolon.
-    private boolean isSeparator(char c){
+    private boolean isSeparator(char c) {
         return c == '\n' || c == ';';
     }
 
@@ -201,37 +210,42 @@ public class Lexer {
         position++;
         // variable countQuotes in case of throwing errors.
         int countQuotes = 0;
-        // While loop to peek through document, will check as long as the next char isn't a quotation mark.
+        // While loop to peek through document, will check as long as the next char
+        // isn't a quotation mark.
         while (document.Peek(0) != '"') {
             // c initiated as the next char.
             char c = document.GetChar();
-            // if c is a backslash, check if next character is a quote. Adds to buffer and position is added as well. countQuotes is incremented.
+            // if c is a backslash, check if next character is a quote. Adds to buffer and
+            // position is added as well. countQuotes is incremented.
             if (c == '\\' && document.Peek(0) == '"') {
                 position++;
                 buffer += c;
                 document.Swallow(1);
                 buffer = HandlePattern(buffer + '"');
                 countQuotes++;
-            } 
+            }
             // else, add 'c' to buffer
             else
                 buffer += c;
         }
-        // Checks if countQuotes is even. Will return an error if number of quotes in stringliteral is uneven
+        // Checks if countQuotes is even. Will return an error if number of quotes in
+        // stringliteral is uneven
         checkEven(countQuotes);
         // Increment positions. Add buffer to tokens.
         document.Swallow(1);
         position += buffer.length() + 2;
         tokens.add(new Token(TokenType.STRINGLITERAL, buffer, position, line));
-}
+    }
 
-    // Checks if i is even, meant for use cases when there is a quote in a string literal.
-    private void checkEven(int i){
-        if(i % 2 != 0)
+    // Checks if i is even, meant for use cases when there is a quote in a string
+    // literal.
+    private void checkEven(int i) {
+        if (i % 2 != 0)
             throw new Error("Must have an even number of quotes in a string literal!");
     }
 
-    // HandlePattern initiated to mutate a stringliteral. Changes all strings '\"' to just "\".
+    // HandlePattern initiated to mutate a stringliteral. Changes all strings '\"'
+    // to just "\".
     private String HandlePattern(String s) {
         return s.substring(0, s.length() - 2) + "\"";
     }
