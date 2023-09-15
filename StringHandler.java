@@ -1,4 +1,4 @@
-package project2;
+package icsi311;
 
 public class StringHandler {
     // Holds text file as string
@@ -7,11 +7,12 @@ public class StringHandler {
     // index shows the position that has been parsed so far through the document.
     private int index = 0;
     private int size;
+
     // Constructor for StringHandler class
     public StringHandler(String s) {
         document = s;
         size = s.length();
-    }   
+    }
 
     /*
      * char Peek(i) -looks “i” characters ahead and returns that character; doesn’t
@@ -68,7 +69,7 @@ public class StringHandler {
         return document.substring(index, document.length());
     }
 
-    public int getLength(){
+    public int getLength() {
         return size;
     }
 }
