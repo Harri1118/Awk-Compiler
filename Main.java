@@ -1,3 +1,5 @@
+package icsi311;
+
 import java.io.IOException;
 import java.nio.file.*;
 
@@ -8,7 +10,7 @@ public class Main {
          */
         try {
             // Reads files with getAllBytes.
-            Path myPath = Paths.get("test.awk");
+            Path myPath = Paths.get("D:\\icsi311\\project2\\test.awk");
             String content = new String(Files.readAllBytes(myPath));
             // Lexer object created to create a linkedlist and display the tokens
             Lexer translator = new Lexer(content);
