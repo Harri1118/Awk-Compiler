@@ -1,4 +1,4 @@
-package project2;
+package icsi311;
 
 import static org.junit.Assert.assertEquals;
 
@@ -7,7 +7,7 @@ import java.beans.Transient;
 import org.junit.Before;
 import org.junit.Test;
 
-import project2.Token.TokenType;
+import icsi311.Token.TokenType;
 
 public class UnitTests {
 
@@ -63,7 +63,7 @@ public class UnitTests {
 
     }
 
-    //Tests random awk command
+    // Tests random awk command
     @Test
     public void test6() {
         lexer = new Lexer("$0 = tolower($0)");
@@ -80,10 +80,11 @@ public class UnitTests {
         assertEquals(Token.TokenType.CLOSEPAREN, lexer.getTokens().get(7).getType());
     }
 
-    //Tests  if statements are all functional.
+    // Tests if statements are all functional.
     @Test
-    public void test7(){
-        lexer = new Lexer("while if do for break continue else return BEGIN END print printf next in delete getline exit nextfile function");
+    public void test7() {
+        lexer = new Lexer(
+                "while if do for break continue else return BEGIN END print printf next in delete getline exit nextfile function");
         lexer.Lex();
         assertEquals(19, lexer.getTokens().size());
         assertEquals(Token.TokenType.WHILE, lexer.getTokens().get(0).getType());
@@ -107,9 +108,9 @@ public class UnitTests {
         assertEquals(Token.TokenType.FUNCTION, lexer.getTokens().get(18).getType());
     }
 
-    //Tests if operators are all functional.
+    // Tests if operators are all functional.
     @Test
-    public void test8(){
+    public void test8() {
         lexer = new Lexer(">=  ++  --  <=  ==  !=  ^=  %=  *=  /=  +=  -=  !~   &&   >>   ||");
         lexer.Lex();
         assertEquals(16, lexer.getTokens().size());
@@ -131,9 +132,9 @@ public class UnitTests {
         assertEquals(TokenType.OR, lexer.getTokens().get(15).getType());
     }
 
-    //Checks if operands are all functional.
+    // Checks if operands are all functional.
     @Test
-    public void test9(){
+    public void test9() {
         lexer = new Lexer("{ } [ ] ( ) $ ~ = < > ! + ^ - ? : * / % ; \n | ,");
         lexer.Lex();
         assertEquals(TokenType.OPBRAC, lexer.getTokens().get(0).getType());
@@ -164,19 +165,35 @@ public class UnitTests {
     }
 
     @Test
-    public void test10(){
-    lexer = new Lexer("\"TEST\"\n\"\\\"TEST\\\"\"");
-    lexer.Lex();
-    assertEquals("STRINGLITERAL(TEST)",lexer.getTokens().get(0).toString());
-    assertEquals("SEPARATOR",lexer.getTokens().get(1).toString());
-    assertEquals("STRINGLITERAL(\"TEST\")",lexer.getTokens().get(2).toString());
+    public void test10() {
+        lexer = new Lexer("\"TEST\"\n\"\\\"TEST\\\"\"");
+        lexer.Lex();
+        assertEquals("STRINGLITERAL(TEST)", lexer.getTokens().get(0).toString());
+        assertEquals("SEPARATOR", lexer.getTokens().get(1).toString());
+        assertEquals("STRINGLITERAL(\"TEST\")", lexer.getTokens().get(2).toString());
     }
 
     @Test
-    public void test11(){
-    lexer = new Lexer("\"\"");
-    lexer.Lex();
-    assertEquals("STRINGLITERAL(TEST)",lexer.getTokens().get(0).toString());
+    public void test11() {
+        lexer = new Lexer("\"\"");
+        lexer.Lex();
+        assertEquals("STRINGLITERAL()", lexer.getTokens().get(0).toString());
     }
 
+    @Test
+    public void test12() {
+        lexer = new Lexer("#test\ntest\n#test");
+        lexer.Lex();
+        assertEquals("SEPARATOR", lexer.getTokens().get(0).toString());
+        assertEquals("WORD(test)", lexer.getTokens().get(1).toString());
+        assertEquals("SEPARATOR", lexer.getTokens().get(2).toString());
+    }
+
+    @Test
+    public void test13() {
+        lexer = new Lexer("test\n#test");
+        lexer.Lex();
+        assertEquals("WORD(test)", lexer.getTokens().get(0).toString());
+        assertEquals("SEPARATOR", lexer.getTokens().get(1).toString());
+    }
 }
