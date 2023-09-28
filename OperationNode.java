@@ -41,10 +41,10 @@ public class OperationNode extends Node {
         Right = r;
     }
 
-    public OperationNode(Node l, Token.TokenType t){
+    public OperationNode(Node l, PossibleOperaions t){
         Left = l;
     }
     public String toString(){
-        return null;
+        return Left.toString() + " Operation goes here? " + Right;
     }
 }
