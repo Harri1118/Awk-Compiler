@@ -104,13 +104,13 @@ public class Parser {
     }
 
     //ParseOperationCalled in ParseBlock. Isn't implemented yet
-    private Optional<Node> ParseOperation(){
+    private Optional<Node> ParseOperation() throws Exception {
         /*if(!(tokenManager.MatchAndRemove(Token.TokenType.OPENPAREN).isEmpty())){
         LinkedList<Token> p = parseParams();
         if(tokenManager.MatchAndRemove(Token.TokenType.CLOSEPAREN).isEmpty())
             throw new Error();
         }*/
-        return Optional.empty();
+        return ParseBottomLevel();
     }
 
     // AcceptSeparators returns true after all the separators in the TokenManager are removed until the next non-separator
@@ -166,11 +166,12 @@ public class Parser {
             Node exp = Expression();
             if(exp == null)
                 throw new Exception("Idk what this is yet lol");
+            if(tokenManager.MatchAndRemove(Token.TokenType.CLOSEPAREN).isEmpty())
+                throw new Exception("Idk what this is yet lol");
+            return exp;
         }
-        if(tokenManager.MatchAndRemove(Token.TokenType.CLOSEPAREN).isEmpty())
-            throw new Exception("Idk what this is yet lol");
         return null;
-    }
+        }
     private Node Term() throws Exception{
         Node left =  Factor();
         do{
@@ -194,18 +195,47 @@ public class Parser {
             if(op.isEmpty())
                 return left;
             Node right = Term();
-            left = new OperationNode(left, op.get().getType());
+            left = new OperationNode(left, OperationNode.PossibleOperaions.SUBTRACT);
         } while(true);
 
     }
 
 
-    private Optional<Node> ParseBottomLevel(){
-        if(tokenManager.Peek(0).get().getType() == Token.TokenType.STRINGLITERAL){}
-        else if(tokenManager.Peek(0).get().getType() == Token.TokenType.NUMBER){}
-
-
-        return null;
+    private Optional<Node> ParseBottomLevel() throws Exception {
+        if(tokenManager.Peek(0).get().getType() == Token.TokenType.STRINGLITERAL)
+            return Optional.of(new ConstantNode(tokenManager.MatchAndRemove(Token.TokenType.STRINGLITERAL).get().getValue()));
+        else if(tokenManager.Peek(0).get().getType() == Token.TokenType.NUMBER)
+            return Optional.of(new ConstantNode(tokenManager.MatchAndRemove(Token.TokenType.NUMBER).get().getValue()));
+        Optional<Node> p = ParsePattern();
+        if(!p.isEmpty())
+            return p;
+        if(!tokenManager.MatchAndRemove(Token.TokenType.OPENPAREN).isEmpty()) {
+            Optional<Node> o = ParseOperation();
+            if(tokenManager.MatchAndRemove(Token.TokenType.CLOSEPAREN).isEmpty())
+                throw new Exception("Idk the erorr");
+            return o;
+        }
+        p = ParseOperation();
+        if(!p.isEmpty())
+            return Optional.of(new OperationNode(p.get(), OperationNode.PossibleOperaions.NOTMATCH));
+        if(!tokenManager.MatchAndRemove(Token.TokenType.MINUS).isEmpty()){
+            p = ParseOperation();
+            return Optional.of(new OperationNode(p.get(), OperationNode.PossibleOperaions.UNARYNEG));
+        }
+        else if(!tokenManager.MatchAndRemove(Token.TokenType.PLUS).isEmpty()){
+            p = ParseOperation();
+            return Optional.of(new OperationNode(p.get(), OperationNode.PossibleOperaions.UNARYPOS));
+        }
+        else if(!tokenManager.MatchAndRemove(Token.TokenType.ADD).isEmpty()){
+            p = ParseOperation();
+            return Optional.of(new OperationNode(p.get(), OperationNode.PossibleOperaions.PREINC));
+        }
+        else if(!tokenManager.MatchAndRemove(Token.TokenType.SUBT).isEmpty()){
+            p = ParseOperation();
+            return Optional.of(new OperationNode(p.get(), OperationNode.PossibleOperaions.PREDEC));
+        }
+        else
+            return ParseLValue();
     }
 
     /*
@@ -214,17 +244,29 @@ public class Parser {
     WORD + OPENARRAY + ParseOperation() + CLOSEARRAY  VariableReferenceNode(name, index)
     WORD (and no OPENARRAY)  VariableReferenceNode(name)
     * */
-    private Optional<Node> ParseLValue(){
-        return null;
+    private Optional<Node> ParseLValue() throws Exception{
+        if(!tokenManager.MatchAndRemove(Token.TokenType.DOLLAR).isEmpty()){
+            Optional<Node> n = ParseBottomLevel();
+            if(n.isEmpty())
+                return Optional.empty();
+            return Optional.of(new OperationNode(n.get(), OperationNode.PossibleOperaions.DOLLAR));
+        }
+        else if(tokenManager.Peek(0).get().getType() == Token.TokenType.WORD){
+            Token t = tokenManager.MatchAndRemove(Token.TokenType.WORD).get();
+            if(!tokenManager.MatchAndRemove(Token.TokenType.OPBRAC).isEmpty()) {
+                Optional<Node> o = ParseOperation();
+                if(tokenManager.MatchAndRemove(Token.TokenType.CLBRAC).isEmpty())
+                    throw new Exception("IDK YET");
+                return Optional.of(new VariableReferenceNode(t.getValue(), o));
+            }
+            else
+                return Optional.of(new VariableReferenceNode(t.getValue()));
+
+        }
+        return Optional.empty();
     }
 
-    private boolean checkPattern(){
-        Optional<Token> t = Optional.of(tokenManager.Peek(0).get());
-        if(t.isEmpty())
-            return false;
-        else if(t.get().getType() == Token.TokenType.STAR || t.get().getType() == Token.TokenType.SLASH)
-            return true;
-        return false;
+    private Optional<Node> ParsePattern(){
+        return Optional.empty();
     }
-
 }
