@@ -1,9 +1,9 @@
 package icsi311;
 
+import icsi311.Token.TokenType;
+
 import java.util.HashMap;
 import java.util.LinkedList;
-
-import icsi311.Token.TokenType;
 
 public class Lexer {
     // StringHandler initiated in this class. Used to parse through document and for
@@ -74,14 +74,16 @@ public class Lexer {
                 // If 'c' isn't recognized by any of these, it will be ignored and the document
                 // swallows 1 and position adds by 1.
                 else {
-                    throw new Exception("Not a recognized character at line: " + line);
+                    throw new Exception("Not a recognized character!");
                 }
             }
         }
         // If Lex() doesn't work (for whatever reason) it prints 'invalid file', and
         // tells the line and position where the error occured.
         catch (Exception e) {
-            System.out.println("Invalid file! Error at line " + line);
+
+            System.out.println("Error at line " + line);
+            System.out.println(e.getMessage());
         }
     }
 
@@ -110,7 +112,7 @@ public class Lexer {
 
     // processNumber() to check the number line by line until it can derive a valid
     // double value.
-    private void processNumber() {
+    private void processNumber() throws Exception{
         // foundPoint initialized to check if there's one decimal in the number.
         boolean foundPoint = false;
         // buffer used for adding all numbers into a string.
@@ -125,7 +127,7 @@ public class Lexer {
             buffer += c;
             // 'throws an error if c is a decimal and point is already found'.
             if (c == '.' && foundPoint == true)
-                throw new Error("Not a valid number at line " + line);
+                throw new Exception("Not a valid number!");
             // if c is '.' foundPoint is true.
             else if (c == '.')
                 foundPoint = true;
@@ -137,7 +139,7 @@ public class Lexer {
     }
 
     // processSymbol state adds operand/operator tokens.
-    private void processSymbol() {
+    private void processSymbol() throws Exception{
         // Tries to check if the next two characters are a valid operator. If not then
         // it will throw an exception
         try {
@@ -163,7 +165,7 @@ public class Lexer {
                 char c = document.Peek(0);
                 // Checks if c is a '&'. If so, throw an immediate error
                 if (c == '&')
-                    throw new Error("cannot have single character '&'!");
+                    throw new Exception("Cannot have single character '&'!");
                 // Add single character operand to tokens if no error is thrown.
                 tokens.add(new Token(charHashes.get(c), String.valueOf(c), position, line));
                 // Add position and swallow, add one to line if c is newline or semicolon
@@ -202,7 +204,8 @@ public class Lexer {
     }
 
     // handleStringLiteral State method
-    private void handleStringLiteral() {
+    private void handleStringLiteral() throws Exception{
+        try{
         // Buffer initiated to parse through document.
         String buffer = "";
         // Skip quote when iterated over.
@@ -230,18 +233,15 @@ public class Lexer {
         }
         // Checks if countQuotes is even. Will return an error if number of quotes in
         // stringliteral is uneven
-        checkEven(countQuotes);
+        if (countQuotes % 2 != 0)
+            throw new Exception("Must have an even number of quotes in a string literal!");
         // Increment positions. Add buffer to tokens.
         document.Swallow(1);
         position += buffer.length() + 2;
-        tokens.add(new Token(TokenType.STRINGLITERAL, buffer, position, line));
-    }
-
-    // Checks if i is even, meant for use cases when there is a quote in a string
-    // literal.
-    private void checkEven(int i) {
-        if (i % 2 != 0)
-            throw new Error("Must have an even number of quotes in a string literal!");
+        tokens.add(new Token(TokenType.STRINGLITERAL, buffer, position, line));}
+        catch(Exception e){
+            throw new Exception("Must have an even number of quotes!");
+        }
     }
 
     // HandlePattern initiated to mutate a stringliteral. Changes all strings '\"'
