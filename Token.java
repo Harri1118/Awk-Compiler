@@ -1,3 +1,5 @@
+package icsi311;
+
 public class Token {
 
     // 2. Has String numbers ?
@@ -11,7 +13,67 @@ public class Token {
     public enum TokenType {
         WORD,
         NUMBER,
-        SEPARATOR
+        SEPARATOR,
+        WHILE,
+        IF,
+        DO,
+        FOR,
+        BREAK,
+        CONTINUE,
+        ELSE,
+        RETURN,
+        BEGIN,
+        END,
+        PRINT,
+        PRINTF,
+        NEXT,
+        IN,
+        DELETE,
+        GETLINE,
+        EXIT,
+        NEXTFILE,
+        FUNCTION,
+        STRINGLITERAL,
+        // Single character types
+        OPBRAC,
+        CLBRAC,
+        SQOPBRAC,
+        SQCLBRAC,
+        OPENPAREN,
+        CLOSEPAREN,
+        DOLLAR,
+        TILDE,
+        ASSIGN,
+        LETHAN,
+        GRTHAN,
+        EXLPT,
+        PLUS,
+        CARROT,
+        MINUS,
+        QMARK,
+        COLON,
+        STAR,
+        SLASH,
+        PERCNT,
+        VERTBAR,
+        COMMA,
+        // Two character symbols
+        GREQ,
+        ADD,
+        SUBT,
+        LEEQ,
+        EQUALS,
+        NEQ,
+        CAREQ,
+        PEREQ,
+        TIEQ,
+        DIVEQ,
+        PLEQ,
+        MINEQ,
+        REGEXP,
+        AND,
+        LEADS,
+        OR
     }
 
     // Type used to specify enum type
@@ -20,6 +82,9 @@ public class Token {
     // Holds string value
     private String str;
 
+    // Holds numerical value
+    private double value;
+
     // Holds line #
     private int ln;
 
@@ -27,8 +92,8 @@ public class Token {
     private int startPos;
 
     // Constructor used for string type cases
-    public Token(String s, int l, int p) {
-        if(s.charAt(0) == 10)
+    public Token(String s, int p, int l) {
+        if (s.charAt(0) == 10)
             type = TokenType.SEPARATOR;
         else
             type = TokenType.WORD;
@@ -38,33 +103,30 @@ public class Token {
 
     }
 
-    // Constructor used for int type cases
-    public Token(double v, int l, int p) {
-        type = TokenType.NUMBER;
-        str = String.valueOf(v);
-        if (str.charAt(str.length() - 1) == 48)
-            str = conv(str);
+    public Token(TokenType t, String s, int p, int l) {
+        type = t;
         ln = l;
         startPos = p;
-
+        str = s;
+        if (t == TokenType.NUMBER) {
+            value = Double.valueOf(s);
+        }
     }
 
     // Shows what the file would look like as a toString
     public String toString() {
+        if (type == TokenType.SEPARATOR)
+            return "SEPARATOR";
         String f = "";
         if (type == TokenType.WORD)
-            f += "WORD(";
+            return "WORD(" + str + ")";
         else if (type == TokenType.NUMBER)
-            f += "NUMBER(";
-        else if (type == TokenType.SEPARATOR)
-            return "SEPARATOR";
+            return "NUMBER(" + getValue() + ")";
+        else if (type == TokenType.STRINGLITERAL)
+            return "STRINGLITERAL(" + str + ")";
+        else
+            return String.valueOf(type);
 
-        return f + str + ")";
-    }
-
-    public String conv(String s) {
-        int l = s.length();
-        return s.substring(0, l - 2);
     }
 
     public int getLine() {
@@ -73,5 +135,17 @@ public class Token {
 
     public int getStartPos() {
         return startPos;
+    }
+
+    public TokenType getType() {
+        return type;
+    }
+
+    public String getValue() {
+        return str;
+    }
+
+    public double getVal(){
+        return value;
     }
 }

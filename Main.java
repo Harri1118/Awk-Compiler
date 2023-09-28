@@ -1,10 +1,12 @@
+package icsi311;
+
 import java.io.IOException;
 import java.nio.file.*;
 
 public class Main {
     public static void main(String[] args) {
         /*
-         * Exists - Done, reads file with GetAllBytes - Done?, calls lex, prints tokens (10) - Done
+         * Tries to run code, if it doesn't work it throws an exception.
          */
         try {
             // Reads files with getAllBytes.
@@ -14,9 +16,14 @@ public class Main {
             Lexer translator = new Lexer(content);
             // Prints Tokens
             translator.Lex();
-            System.out.println(translator.getTokens());
+            //Parser initiated and is printed when Parse() is called.
+            Parser parser = new Parser(translator.getTokens());
+            System.out.println(parser.Parse());
+
         } catch (IOException e) {
             e.printStackTrace();
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
         }
     }
 }

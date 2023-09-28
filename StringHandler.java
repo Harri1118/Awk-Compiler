@@ -1,13 +1,17 @@
+package icsi311;
+
 public class StringHandler {
-    //Holds text file as string
+    // Holds text file as string
     private String document;
 
-    //index shows the position that has been parsed so far through the document.
+    // index shows the position that has been parsed so far through the document.
     private int index = 0;
+    private int size;
 
-    //Constructor for StringHandler class
+    // Constructor for StringHandler class
     public StringHandler(String s) {
         document = s;
+        size = s.length();
     }
 
     /*
@@ -36,7 +40,7 @@ public class StringHandler {
      */
     public char GetChar() {
         index++;
-        return document.charAt(index);
+        return document.charAt(index - 1);
     }
 
     /*
@@ -65,7 +69,7 @@ public class StringHandler {
         return document.substring(index, document.length());
     }
 
-    public int getPos() {
-        return index;
+    public int getLength() {
+        return size;
     }
 }
