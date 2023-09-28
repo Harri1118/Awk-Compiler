@@ -119,15 +119,14 @@ public class Token {
             return "SEPARATOR";
         String f = "";
         if (type == TokenType.WORD)
-            f += "WORD(";
+            return "WORD(" + str + ")";
         else if (type == TokenType.NUMBER)
-            f += "NUMBER(";
+            return "NUMBER(" + getValue() + ")";
         else if (type == TokenType.STRINGLITERAL)
-            f += "STRINGLITERAL(";
+            return "STRINGLITERAL(" + str + ")";
         else
             return String.valueOf(type);
 
-        return f + str + ")";
     }
 
     public int getLine() {
@@ -144,5 +143,9 @@ public class Token {
 
     public String getValue() {
         return str;
+    }
+
+    public double getVal(){
+        return value;
     }
 }
