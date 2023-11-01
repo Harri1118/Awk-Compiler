@@ -2,19 +2,25 @@ package icsi311;
 
 public class ConstantNode extends Node {
     double value;
-<<<<<<< HEAD
     String strValue;
+
+    private boolean isString;
     public ConstantNode(double i){
         value = i;
+        strValue = String.valueOf(i);
+        isString = false;
     }
-    public ConstantNode(String s){strValue = s;}
+    public ConstantNode(String s){strValue = s;
+    isString= true;
+    }
 
     public String toString(){
-        return "CONSTANT("+strValue+")";
+    if(isString == true)
+        return "\""+strValue+"\"";
+    return String.valueOf(value);
     }
-=======
-    public ConstantNode(double i){
-        value = i;
+
+    public boolean isString(){
+        return isString;
     }
->>>>>>> 4e5781c (Changes for Parser 2)
 }

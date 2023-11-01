@@ -61,15 +61,4 @@ public class StringHandler {
         }
         return false;
     }
-
-    /*
-     * String Remainder() – returns the rest of the document as a string
-     */
-    public String Remainder() {
-        return document.substring(index, document.length());
-    }
-
-    public int getLength() {
-        return size;
-    }
 }

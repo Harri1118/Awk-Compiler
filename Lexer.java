@@ -36,7 +36,7 @@ public class Lexer {
 
     // 'Lex()' Method to parse through the document and convert to tokens for the
     // 'tokens' variable.
-    public void Lex() {
+    public void Lex() throws Exception {
         // Try parsing through document until there is an error.
         try {
             // Stopper boolean which doesn't stop the loop until it is finished.
@@ -81,9 +81,7 @@ public class Lexer {
         // If Lex() doesn't work (for whatever reason) it prints 'invalid file', and
         // tells the line and position where the error occured.
         catch (Exception e) {
-
-            System.out.println("Error at line " + line);
-            System.out.println(e.getMessage());
+            throw new Exception("Error at line " + line + "\n" + e.getMessage());
         }
     }
 
@@ -187,7 +185,7 @@ public class Lexer {
     private void commentState() {
         // Checks if the char is a separator. For cases when it hits the end of the
         // document, the method breaks. Adds position and line.
-        while (isSeparator(document.GetChar())) {
+        while (!isSeparator(document.GetChar())) {
             if (document.IsDone())
                 break;
             position++;
@@ -211,8 +209,6 @@ public class Lexer {
         // Skip quote when iterated over.
         document.Swallow(1);
         position++;
-        // variable countQuotes in case of throwing errors.
-        int countQuotes = 0;
         // While loop to peek through document, will check as long as the next char
         // isn't a quotation mark.
         while (document.Peek(0) != '"') {
@@ -225,16 +221,11 @@ public class Lexer {
                 buffer += c;
                 document.Swallow(1);
                 buffer = HandlePattern(buffer + '"');
-                countQuotes++;
             }
             // else, add 'c' to buffer
             else
                 buffer += c;
         }
-        // Checks if countQuotes is even. Will return an error if number of quotes in
-        // stringliteral is uneven
-        if (countQuotes % 2 != 0)
-            throw new Exception("Must have an even number of quotes in a string literal!");
         // Increment positions. Add buffer to tokens.
         document.Swallow(1);
         position += buffer.length() + 2;
@@ -278,10 +269,10 @@ public class Lexer {
     private void setSingleChar() {
         charHashes.put('{', TokenType.OPBRAC);
         charHashes.put('}', TokenType.CLBRAC);
-        charHashes.put('[', TokenType.SQOPBRAC);
-        charHashes.put(']', TokenType.SQCLBRAC);
-        charHashes.put('(', TokenType.OPENPAREN);
-        charHashes.put(')', TokenType.CLOSEPAREN);
+        charHashes.put('[', TokenType.OPBRACE);
+        charHashes.put(']', TokenType.CLBRACE);
+        charHashes.put('(', TokenType.OPAREN);
+        charHashes.put(')', TokenType.CPAREN);
         charHashes.put('$', TokenType.DOLLAR);
         charHashes.put('~', TokenType.TILDE);
         charHashes.put('=', TokenType.ASSIGN);
@@ -301,6 +292,7 @@ public class Lexer {
         charHashes.put('|', TokenType.VERTBAR);
         charHashes.put(',', TokenType.COMMA);
         charHashes.put('&', null);
+        charHashes.put('`', TokenType.BACKTIC);
     }
 
     // setDoubleChars used for setting double characters to tokens.
@@ -325,7 +317,8 @@ public class Lexer {
     }
 
     // Returns the 'tokens' variable.
-    public LinkedList<Token> getTokens() {
+    public LinkedList<Token> getTokens() throws Exception{
+        Lex();
         return tokens;
     }
 }

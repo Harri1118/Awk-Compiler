@@ -37,10 +37,10 @@ public class Token {
         // Single character types
         OPBRAC,
         CLBRAC,
-        SQOPBRAC,
-        SQCLBRAC,
-        OPENPAREN,
-        CLOSEPAREN,
+        OPBRACE,
+        CLBRACE,
+        OPAREN,
+        CPAREN,
         DOLLAR,
         TILDE,
         ASSIGN,
@@ -57,6 +57,7 @@ public class Token {
         PERCNT,
         VERTBAR,
         COMMA,
+        BACKTIC,
         // Two character symbols
         GREQ,
         ADD,
@@ -117,13 +118,12 @@ public class Token {
     public String toString() {
         if (type == TokenType.SEPARATOR)
             return "SEPARATOR";
-        String f = "";
         if (type == TokenType.WORD)
-            return "WORD(" + str + ")";
+            return str;
         else if (type == TokenType.NUMBER)
-            return "NUMBER(" + getValue() + ")";
+            return getValue();
         else if (type == TokenType.STRINGLITERAL)
-            return "STRINGLITERAL(" + str + ")";
+            return "\"" + str + "\"";
         else
             return String.valueOf(type);
 

@@ -1,79 +1,61 @@
 package icsi311;
 
 import icsi311.Token.TokenType;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.io.FileWriter;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class UnitTests {
 
     private Lexer lexer;
-
+    private Interpreter interpreter;
     @Test
-    public void test0() {
+    public void testBasicLexer() throws Exception{
         lexer = new Lexer("");
-        lexer.Lex();
         assertEquals("[]", lexer.getTokens().toString());
-    }
-
-    @Test
-    public void test1() {
         lexer = new Lexer("example");
-        lexer.Lex();
-        assertEquals("[WORD(example)]", lexer.getTokens().toString());
-    }
-
-    @Test
-    public void test2() {
+        assertEquals("[example]", lexer.getTokens().toString());
         lexer = new Lexer("123");
-        lexer.Lex();
-        assertEquals("[NUMBER(123)]", lexer.getTokens().toString());
-    }
-
-    @Test
-    public void test3() {
+        assertEquals("[123]", lexer.getTokens().toString());
         lexer = new Lexer("\n");
-        lexer.Lex();
         assertEquals("[SEPARATOR]", lexer.getTokens().toString());
-    }
-
-    @Test
-    public void test4() {
         lexer = new Lexer("test 5");
-        lexer.Lex();
-        assertEquals("[WORD(test), NUMBER(5)]", lexer.getTokens().toString());
-    }
-
-    @Test
-    public void test5() {
+        assertEquals("[test, 5]", lexer.getTokens().toString());
         lexer = new Lexer("5 test\ntest 5");
-        lexer.Lex();
-        assertEquals("[NUMBER(5), WORD(test), SEPARATOR, WORD(test), NUMBER(5)]", lexer.getTokens().toString());
+        assertEquals("[5, test, SEPARATOR, test, 5]", lexer.getTokens().toString());
+
     }
 
     @Test
-    public void test6() {
+    public void ValidLexerCommand() throws Exception{
         lexer = new Lexer("$0 = tolower($0)");
-        lexer.Lex();
         assertEquals(8, lexer.getTokens().size());
         assertEquals(Token.TokenType.DOLLAR, lexer.getTokens().get(0).getType());
         assertEquals(Token.TokenType.NUMBER, lexer.getTokens().get(1).getType());
         assertEquals(Token.TokenType.ASSIGN, lexer.getTokens().get(2).getType());
         assertEquals(Token.TokenType.WORD, lexer.getTokens().get(3).getType());
         assertEquals("tolower", lexer.getTokens().get(3).getValue());
-        assertEquals(Token.TokenType.OPENPAREN, lexer.getTokens().get(4).getType());
+        assertEquals(Token.TokenType.OPAREN, lexer.getTokens().get(4).getType());
         assertEquals(Token.TokenType.DOLLAR, lexer.getTokens().get(5).getType());
         assertEquals(Token.TokenType.NUMBER, lexer.getTokens().get(6).getType());
-        assertEquals(Token.TokenType.CLOSEPAREN, lexer.getTokens().get(7).getType());
+        assertEquals(Token.TokenType.CPAREN, lexer.getTokens().get(7).getType());
     }
 
     @Test
-    public void test7() {
-        lexer = new Lexer(
-                "while if do for break continue else return BEGIN END print printf next in delete getline exit nextfile function");
-        lexer.Lex();
+    public void AWKWords() throws Exception{
+        lexer = new Lexer("while if do for break continue else return BEGIN END print printf next in delete getline exit nextfile function");
         assertEquals(19, lexer.getTokens().size());
         assertEquals(Token.TokenType.WHILE, lexer.getTokens().get(0).getType());
         assertEquals(Token.TokenType.IF, lexer.getTokens().get(1).getType());
@@ -97,9 +79,8 @@ public class UnitTests {
     }
 
     @Test
-    public void test8() {
+    public void AWKBooleans() throws Exception{
         lexer = new Lexer(">=  ++  --  <=  ==  !=  ^=  %=  *=  /=  +=  -=  !~   &&   >>   ||");
-        lexer.Lex();
         assertEquals(16, lexer.getTokens().size());
         assertEquals(TokenType.GREQ, lexer.getTokens().get(0).getType());
         assertEquals(TokenType.ADD, lexer.getTokens().get(1).getType());
@@ -120,15 +101,14 @@ public class UnitTests {
     }
 
     @Test
-    public void test9() {
+    public void AWKCharacters() throws Exception{
         lexer = new Lexer("{ } [ ] ( ) $ ~ = < > ! + ^ - ? : * / % ; \n | ,");
-        lexer.Lex();
         assertEquals(TokenType.OPBRAC, lexer.getTokens().get(0).getType());
         assertEquals(TokenType.CLBRAC, lexer.getTokens().get(1).getType());
-        assertEquals(TokenType.SQOPBRAC, lexer.getTokens().get(2).getType());
-        assertEquals(TokenType.SQCLBRAC, lexer.getTokens().get(3).getType());
-        assertEquals(TokenType.OPENPAREN, lexer.getTokens().get(4).getType());
-        assertEquals(TokenType.CLOSEPAREN, lexer.getTokens().get(5).getType());
+        assertEquals(TokenType.OPBRACE, lexer.getTokens().get(2).getType());
+        assertEquals(TokenType.CLBRACE, lexer.getTokens().get(3).getType());
+        assertEquals(TokenType.OPAREN, lexer.getTokens().get(4).getType());
+        assertEquals(TokenType.CPAREN, lexer.getTokens().get(5).getType());
         assertEquals(TokenType.DOLLAR, lexer.getTokens().get(6).getType());
         assertEquals(TokenType.TILDE, lexer.getTokens().get(7).getType());
         assertEquals(TokenType.ASSIGN, lexer.getTokens().get(8).getType());
@@ -150,92 +130,57 @@ public class UnitTests {
     }
 
     @Test
-    public void test10() {
+    public void LexerCommentsStringLiteralsAndLexer2Errors() throws Exception{
         lexer = new Lexer("\"TEST\"\n\"\\\"TEST\\\"\"");
-        lexer.Lex();
-        assertEquals("STRINGLITERAL(TEST)", lexer.getTokens().get(0).toString());
+        assertEquals("\"TEST\"", lexer.getTokens().get(0).toString());
         assertEquals("SEPARATOR", lexer.getTokens().get(1).toString());
-        assertEquals("STRINGLITERAL(\"TEST\")", lexer.getTokens().get(2).toString());
-    }
-
-    @Test
-    public void test11() {
+        assertEquals("\"\"TEST\"\"", lexer.getTokens().get(2).toString());
         lexer = new Lexer("\"\"");
-        lexer.Lex();
-        assertEquals("STRINGLITERAL()", lexer.getTokens().get(0).toString());
-    }
-
-    @Test
-    public void test12() {
+        assertEquals("\"\"", lexer.getTokens().get(0).toString());
         lexer = new Lexer("#test\ntest\n#test");
-        lexer.Lex();
         assertEquals("SEPARATOR", lexer.getTokens().get(0).toString());
-        assertEquals("WORD(test)", lexer.getTokens().get(1).toString());
+        assertEquals("test", lexer.getTokens().get(1).toString());
         assertEquals("SEPARATOR", lexer.getTokens().get(2).toString());
-    }
-
-    @Test
-    public void test13() {
         lexer = new Lexer("test\n#test");
-        lexer.Lex();
-        assertEquals("WORD(test)", lexer.getTokens().get(0).toString());
+        assertEquals("test", lexer.getTokens().get(0).toString());
         assertEquals("SEPARATOR", lexer.getTokens().get(1).toString());
+        Exception thrown = assertThrows(Exception.class, () -> {
+            lexer = new Lexer("_");
+            lexer.getTokens();
+        });
+        Assertions.assertEquals("Error at line 1\nNot a recognized character!", thrown.getMessage());
+         thrown = assertThrows(Exception.class, () -> {
+            lexer = new Lexer("\n2.22.");
+            lexer.getTokens();
+        });
+        Assertions.assertEquals("Error at line 2\nNot a valid number!", thrown.getMessage());
+         thrown = assertThrows(Exception.class, () -> {
+            lexer = new Lexer("&");
+            lexer.getTokens();
+        });
+        assertEquals("Error at line 1\nCannot have single character '&'!", thrown.getMessage());
+        thrown = assertThrows(Exception.class, () -> {
+            lexer = new Lexer("&");
+            lexer.getTokens();
+        });
+        assertEquals("Error at line 1\nCannot have single character '&'!", thrown.getMessage());
+        thrown = assertThrows(Exception.class, () -> {
+            lexer = new Lexer("\"\"\"");
+            lexer.getTokens();
+        });
+        Assertions.assertEquals("Error at line 1\nMust have an even number of quotes!", thrown.getMessage());
+
+        thrown = assertThrows(Exception.class, () -> {
+            lexer = new Lexer("\"\"\n\"\"\"");
+            lexer.getTokens();
+        });
+        Assertions.assertEquals("Error at line 2\nMust have an even number of quotes!", thrown.getMessage());
+
     }
 
     @Test
-    public void test14() {
-        lexer = new Lexer("_");
-        try {
-            lexer.Lex();
-        } catch (Exception e) {
-            assertEquals("Error at line 1\nNot a recognized character!", e.getMessage());
-        }
-    }
-
-    @Test
-    public void test15() {
-        lexer = new Lexer("\n2.22.");
-        try {
-            lexer.Lex();
-        } catch (Exception e) {
-            assertEquals("Error at line 2\nNot a valid number!", e.getMessage());
-        }
-    }
-
-    @Test
-    public void test16() {
-        lexer = new Lexer("&");
-        try {
-            lexer.Lex();
-        } catch (Exception e) {
-            assertEquals("Error at line 1\nCannot have single character '&'!", e.getMessage());
-        }
-    }
-
-    @Test
-    public void test17() {
-        lexer = new Lexer("\"\"\"");
-        try {
-            lexer.Lex();
-        } catch (Exception e) {
-            assertEquals("Error at line 1\nMust have an even number of quotes!", e.getMessage());
-        }
-    }
-
-    @Test
-    public void test18() {
-        lexer = new Lexer("\"\\\"test\"");
-        try {
-            lexer.Lex();
-        } catch (Exception e) {
-            assertEquals("Error at line 1\nMust have an even number of quotes in a string literal!", e.getMessage());
-        }
-    }
-
-    @Test
-    public void test19() {
+    public void TokenManagerTest() throws Exception{
         lexer = new Lexer("$0");
-        lexer.Lex();
         LinkedList<Token> testList = new LinkedList<Token>();
         testList.add(new Token(Token.TokenType.DOLLAR, "$", 0, 1));
         testList.add(new Token(Token.TokenType.NUMBER, "0", 0, 1));
@@ -250,136 +195,1410 @@ public class UnitTests {
     }
 
     @Test
-    public void test20() {
-        LinkedList<Token> statement = new LinkedList<Token>();
-        statement.add(new Token("SEPARATOR",0,1));
-        statement.add(new Token("Hello", 1, 2));
-        statement.add(new Token("SEPARATOR",0,2));
-        Parser p = new Parser(statement);
+    public void TestActionsExceptions() throws Exception {
+        lexer = new Lexer("BEGIN{}\n(a==2){}\nEND{}");
+        Parser p0 = new Parser(lexer.getTokens());
+        ProgramNode ref = new ProgramNode();
+        ref.addBegin(new BlockNode(new LinkedList<StatementNode>()));
+        OperationNode Condition = new OperationNode(new VariableReferenceNode("a"), OperationNode.PossibleOperations.EQ, new ConstantNode(2));
+        ref.addOther(new BlockNode(Condition, new LinkedList<StatementNode>()));
+        ref.addEnd(new BlockNode(new LinkedList<StatementNode>()));
+        assertEquals(ref.toString(), p0.Parse().toString());
+            Exception thrown = assertThrows(Exception.class, () -> {
+            lexer = new Lexer("BEGIN\nEND");
+            Parser parser = new Parser(lexer.getTokens());
+            parser.Parse();
+        });
+        Assertions.assertEquals("Invalid program structure! Must have a valid block structure! ex: BEGIN{Operation}", thrown.getMessage());
+
+        thrown = assertThrows(Exception.class, () -> {
+            lexer = new Lexer("BEGIN\n{\nEND");
+            Parser p = new Parser(lexer.getTokens());
+            p.Parse();
+        });
+        Assertions.assertEquals("Invalid program structure! Must have a valid block structure! ex: BEGIN{Operation}", thrown.getMessage());
+        thrown = assertThrows(Exception.class, () -> {
+            lexer = new Lexer("function test(a,b){}\nBEGIN{}\nEND{}");
+            Parser parser = new Parser(lexer.getTokens());
+            parser.Parse();
+        });
+        Assertions.assertEquals("Not a valid program structure! Must define a function after a BEGIN Block!", thrown.getMessage());
     }
 
     @Test
-    public void test21() {
-        try {
-            Lexer l = new Lexer("function test(a,b)\nBEGIN\nEND");
-            l.Lex();
-            Parser p = new Parser(l.getTokens());
-            ProgramNode pr = p.Parse();
-            assertEquals("BEGIN{[Condition: null, Statements: null]}\nOTHER{[]}\nEND{[Condition: null, Statements: null]}\nFunctions:\n[WORD(test)(WORD(a),WORD(b)) Statements: null]", pr.toString());
-        }
-        catch(Exception e){
-            System.out.println("Function is wrong.");
-        }
+    public void functionsExceptions() throws Exception{
+        lexer = new Lexer("function a (b,c){}");
+        Parser p0 = new Parser(lexer.getTokens());
+        ProgramNode ref = new ProgramNode();
+        String[] params = {"b","c"};
+        FunctionDefinitionNode f = new FunctionDefinitionNode("a", params, new LinkedList<StatementNode>());
+        ref.addFunction(f);
+        assertEquals(ref.toString(), p0.Parse().toString());
+        Exception thrown = assertThrows(Exception.class, () -> {
+            lexer = new Lexer("function");
+            Parser p = new Parser(lexer.getTokens());
+            p.Parse();
+        });
+        Assertions.assertEquals("File ended before function parsed!", thrown.getMessage());
+
+        thrown = assertThrows(Exception.class, () -> {
+            lexer = new Lexer("function()");
+            Parser p = new Parser(lexer.getTokens());
+            p.Parse();
+        });
+        Assertions.assertEquals("Must have a valid method name!", thrown.getMessage());
+
+        thrown = assertThrows(Exception.class, () -> {
+            lexer = new Lexer("function test\n");
+            Parser p = new Parser(lexer.getTokens());
+            p.Parse();
+        });
+        Assertions.assertEquals("Function must have parenthesis for proper parameter declaration! Ex: function myFunction(a){}", thrown.getMessage());
+
+        thrown = assertThrows(Exception.class, () -> {
+            lexer = new Lexer("function test)");
+            Parser p = new Parser(lexer.getTokens());
+            p.Parse();
+        });
+        Assertions.assertEquals("Function must have parenthesis for proper parameter declaration! Ex: function myFunction(a){}", thrown.getMessage());
+        thrown = assertThrows(Exception.class, () -> {
+            lexer = new Lexer("function t(t,)");
+            Parser p = new Parser(lexer.getTokens());
+            p.Parse();
+        });
+        Assertions.assertEquals("Cannot have comma at the end of a parameter list without properly declaring parameters! Ex: function myFunc(a,b,c)", thrown.getMessage());
+
     }
 
     @Test
-    public void test22() throws Exception {
-        Lexer l = new Lexer("\nfunction test()\n\n\nBEGIN\nEND\n");
-        l.Lex();
+    public void BottomLevelAndLValue() throws Exception{
+        Lexer l = new Lexer("++$b");
         Parser p = new Parser(l.getTokens());
-        ProgramNode pr = p.Parse();
-        assertEquals("BEGIN{[Condition: null, Statements: null]}\nOTHER{[]}\nEND{[Condition: null, Statements: null]}\nFunctions:\n[WORD(test)() Statements: null]", pr.toString());
+        Node ref = new OperationNode(new OperationNode(new VariableReferenceNode("b"), OperationNode.PossibleOperations.DOLLAR), OperationNode.PossibleOperations.PREINC);
+        assertEquals(ref.toString(), p.ParseOperation().get().toString());
+        l = new Lexer("++a");
+        p = new Parser(l.getTokens());
+        VariableReferenceNode v = new VariableReferenceNode("a");
+        ref = new OperationNode(v, OperationNode.PossibleOperations.PREINC);
+        Node op = p.ParseOperation().get();
+        assertEquals(ref.toString(), op.toString());
+        l = new Lexer("(++d)");
+        p = new Parser(l.getTokens());
+        ref = new OperationNode(new VariableReferenceNode("d"), OperationNode.PossibleOperations.PREINC);
+        assertEquals(ref.toString(), p.ParseOperation().get().toString());
+        l = new Lexer("-5");
+        p = new Parser(l.getTokens());
+        ref = new OperationNode(new ConstantNode(5), OperationNode.PossibleOperations.UNARYNEG);
+        assertEquals(ref.toString(), p.ParseOperation().get().toString());
+        l = new Lexer("`[abc]`");
+        p = new Parser(l.getTokens());
+        assertEquals("PatternNode", p.ParseOperation().get().toString());
+        l = new Lexer("e[++b]");
+        p = new Parser(l.getTokens());
+        Optional<Node> refPart = Optional.of(new OperationNode(new VariableReferenceNode("b"), OperationNode.PossibleOperations.PREINC));
+        ref = new VariableReferenceNode("e", refPart);
+        assertEquals(ref.toString(), p.ParseOperation().get().toString());
+        l = new Lexer("$7");
+        p = new Parser(l.getTokens());
+        ref = new OperationNode(new ConstantNode(7), OperationNode.PossibleOperations.DOLLAR);
+        assertEquals(ref.toString(), p.ParseOperation().get().toString());
+    }
+
+
+    @Test
+    public void ParseBottomLevelAndLValueErrors() throws Exception{
+        Exception thrown = assertThrows(Exception.class, () -> {
+            Lexer lexer = new Lexer("a[");
+            Parser p = new Parser(lexer.getTokens());
+            p.ParseOperation();
+        });
+        Assertions.assertEquals("Error! Complete a full operation with a closing brace for the array! ex: VARIABLE[OPERATION]", thrown.getMessage());
+        thrown = assertThrows(Exception.class, () -> {
+            lexer = new Lexer("(a");
+            Parser p = new Parser(lexer.getTokens());
+            p.ParseOperation();
+        });
+        Assertions.assertEquals("Error! Must have closing parenthesis for an operation to occur!", thrown.getMessage());
+
     }
 
     @Test
-    public void test23() throws Exception {
-        Lexer l = new Lexer("BEGIN\nEND");
-        l.Lex();
+    public void PostIncAndPostDec() throws Exception {
+        Lexer l = new Lexer("a++");
         Parser p = new Parser(l.getTokens());
-        ProgramNode pr = p.Parse();
-        assertEquals("BEGIN{[Condition: null, Statements: null]}\nOTHER{[]}\nEND{[Condition: null, Statements: null]}\nFunctions:\n[]", pr.toString());
+        OperationNode ref = new OperationNode(new VariableReferenceNode("a"), OperationNode.PossibleOperations.POSTINC);
+        assertEquals(ref.toString(), p.ParseOperation().get().toString());
+        l = new Lexer("a--");
+        p = new Parser(l.getTokens());
+        ref = new OperationNode(new VariableReferenceNode("a"), OperationNode.PossibleOperations.POSTDEC);
+        assertEquals(ref.toString(), p.ParseOperation().get().toString());
+        Exception thrown = assertThrows(Exception.class, () -> {
+            lexer = new Lexer("2++");
+            Parser p2 = new Parser(lexer.getTokens());
+            p2.ParseOperation();
+        });
+        Assertions.assertEquals("Incorrect syntax! Must be in the form of \"Variable++ or Variable--\"", thrown.getMessage());
+
     }
 
     @Test
-    public void test24(){
-        try{
-            Lexer l = new Lexer("function");
-            l.Lex();
-            Parser p = new Parser(l.getTokens());
-            p.Parse();
-        }
-        catch(Exception e){
-            assertEquals("Reached end of line before proper method return!",e.getMessage());
-        }
+    public void Exponents() throws Exception{
+        Lexer l = new Lexer("a^b");
+        Parser p = new Parser(l.getTokens());
+        OperationNode ref = new OperationNode(new VariableReferenceNode("a"), OperationNode.PossibleOperations.EXPONENT, new VariableReferenceNode("b"));
+        assertEquals(ref.toString(), p.ParseOperation().get().toString());
+        l = new Lexer("a^2");
+        p = new Parser(l.getTokens());
+        ref = new OperationNode(new VariableReferenceNode("a"), OperationNode.PossibleOperations.EXPONENT, new ConstantNode(2));
+        assertEquals(ref.toString(), p.ParseOperation().get().toString());
+        l = new Lexer("2^a");
+        p = new Parser(l.getTokens());
+        ref = new OperationNode(new ConstantNode(2), OperationNode.PossibleOperations.EXPONENT, new VariableReferenceNode("a"));
+        assertEquals(ref.toString(), p.ParseOperation().get().toString());
+        l = new Lexer("2^2");
+        p = new Parser(l.getTokens());
+        ref = new OperationNode(new ConstantNode(2), OperationNode.PossibleOperations.EXPONENT, new ConstantNode(2));
+        assertEquals(ref.toString(), p.ParseOperation().get().toString());
+        l = new Lexer("(a^2)^2");
+        p = new Parser(l.getTokens());
+        OperationNode leftValue = new OperationNode(new VariableReferenceNode("a"), OperationNode.PossibleOperations.EXPONENT, new ConstantNode(2));
+        ref = new OperationNode(leftValue, OperationNode.PossibleOperations.EXPONENT, new ConstantNode(2));
+        assertEquals(ref.toString(), p.ParseOperation().get().toString());
+        l = new Lexer("a^(a^2)");
+        p = new Parser(l.getTokens());
+        OperationNode rightValue = new OperationNode(new VariableReferenceNode("a"), OperationNode.PossibleOperations.EXPONENT, new ConstantNode(2));
+        ref = new OperationNode(new VariableReferenceNode("a"), OperationNode.PossibleOperations.EXPONENT, rightValue);
+        assertEquals(ref.toString(), p.ParseOperation().get().toString());
+        l = new Lexer("(a^2)^(a^2)");
+        p = new Parser(l.getTokens());
+        ref = new OperationNode(leftValue, OperationNode.PossibleOperations.EXPONENT, rightValue);
+        assertEquals(ref.toString(), p.ParseOperation().get().toString());
+        l = new Lexer("a^a^a");
+        p = new Parser(l.getTokens());
+        rightValue = new OperationNode(new VariableReferenceNode("a"), OperationNode.PossibleOperations.EXPONENT, new VariableReferenceNode("a"));
+        ref = new OperationNode(new VariableReferenceNode("a"), OperationNode.PossibleOperations.EXPONENT, rightValue);
+        assertEquals(ref.toString(), p.ParseOperation().get().toString());
+        Exception thrown = assertThrows(Exception.class, () -> {
+            lexer = new Lexer("^a");
+            Parser p2 = new Parser(lexer.getTokens());
+            p2.ParseOperation();
+        });
+        Assertions.assertEquals("Must have a complete exponential expression! ex: EXPRESSION^EXPRESSION", thrown.getMessage());
+
+        thrown = assertThrows(Exception.class, () -> {
+            lexer = new Lexer("a^");
+            Parser p2 = new Parser(lexer.getTokens());
+            p2.ParseOperation();
+        });
+        Assertions.assertEquals("Must have a complete exponential expression! ex: EXPRESSION^EXPRESSION", thrown.getMessage());
+
     }
 
     @Test
-    public void test25(){
-        try{
-            Lexer l = new Lexer("function()\n\n");
-            l.Lex();
-            Parser p = new Parser(l.getTokens());
-            p.Parse();
-        }
-        catch(Exception e){
-            assertEquals("Must have a valid method name!", e.getMessage());
-        }
+    public void ParseExpression() throws Exception{
+        Lexer l = new Lexer("(a+b)");
+        Parser p = new Parser(l.getTokens());
+        OperationNode ref = new OperationNode(new VariableReferenceNode("a"), OperationNode.PossibleOperations.ADD, new VariableReferenceNode("b"));
+        assertEquals(ref.toString(), p.ParseOperation().get().toString());
+        l = new Lexer("(a+2)-c");
+        p = new Parser(l.getTokens());
+        OperationNode leftValue = new OperationNode(new VariableReferenceNode("a"), OperationNode.PossibleOperations.ADD, new ConstantNode(2));
+        ref = new OperationNode(leftValue, OperationNode.PossibleOperations.SUBTRACT, new VariableReferenceNode("c"));
+        assertEquals(ref.toString(), p.ParseOperation().get().toString());
+        l = new Lexer("(a+b)-(c+5)");
+        p = new Parser(l.getTokens());
+        leftValue = new OperationNode(new VariableReferenceNode("a"), OperationNode.PossibleOperations.ADD, new VariableReferenceNode("b"));
+        OperationNode rightValue = new OperationNode(new VariableReferenceNode("c"), OperationNode.PossibleOperations.ADD, new ConstantNode(5));
+        ref = new OperationNode(leftValue, OperationNode.PossibleOperations.SUBTRACT, rightValue);
+        assertEquals(ref.toString(), p.ParseOperation().get().toString());
+        Exception thrown = assertThrows(Exception.class, () -> {
+            lexer = new Lexer("(a+t) + ()");
+            Parser p2 = new Parser(lexer.getTokens());
+            p2.ParseOperation();
+        });
+        Assertions.assertEquals("Invalid Term! Must be in the form of \"TERM +|- TERM\"", thrown.getMessage());
+
+        thrown = assertThrows(Exception.class, () -> {
+            lexer = new Lexer("(a+t) +");
+            Parser p3 = new Parser(lexer.getTokens());
+            p3.ParseOperation();
+        });
+        Assertions.assertEquals("Invalid Term! Must be in the form of \"TERM +|- TERM\"", thrown.getMessage());
+        thrown = assertThrows(Exception.class, () -> {
+            lexer = new Lexer("(a");
+            Parser p3 = new Parser(lexer.getTokens());
+            p3.ParseOperation();
+        });
+        Assertions.assertEquals("Error! Must have closing parenthesis for an operation to occur!", thrown.getMessage());
+
     }
 
     @Test
-    public void test26(){
-        try{
-            Lexer l = new Lexer("function test\n\n");
-            l.Lex();
-            Parser p = new Parser(l.getTokens());
-            p.Parse();
+    public void ParseTerm() throws Exception{
+        Lexer l = new Lexer("a * b");
+        Parser p = new Parser(l.getTokens());
+        OperationNode ref = new OperationNode(new VariableReferenceNode("a"), OperationNode.PossibleOperations.MULTIPLY, new VariableReferenceNode("b"));
+        assertEquals(ref.toString(), p.ParseOperation().get().toString());
+        l = new Lexer("a/b");
+        p = new Parser(l.getTokens());
+        ref = new OperationNode(new VariableReferenceNode("a"), OperationNode.PossibleOperations.DIVIDE, new VariableReferenceNode("b"));
+        assertEquals(ref.toString(), p.ParseOperation().get().toString());
+        l = new Lexer("a * 2");
+        p = new Parser(l.getTokens());
+        ref = new OperationNode(new VariableReferenceNode("a"), OperationNode.PossibleOperations.MULTIPLY, new ConstantNode(2));
+        assertEquals(ref.toString(), p.ParseOperation().get().toString());
+        l = new Lexer("2 / a");
+        p = new Parser(l.getTokens());
+        ref = new OperationNode(new ConstantNode(2), OperationNode.PossibleOperations.DIVIDE, new VariableReferenceNode("a"));
+        assertEquals(ref.toString(), p.ParseOperation().get().toString());
+        l = new Lexer("(a*2)*a");
+        p = new Parser(l.getTokens());
+        OperationNode leftValue = new OperationNode(new VariableReferenceNode("a"), OperationNode.PossibleOperations.MULTIPLY, new ConstantNode(2));
+        ref = new OperationNode(leftValue, OperationNode.PossibleOperations.MULTIPLY, new VariableReferenceNode("a"));
+        assertEquals(ref.toString(), p.ParseOperation().get().toString());
+        l = new Lexer("a*(a*2)");
+        p = new Parser(l.getTokens());
+        OperationNode rightValue = new OperationNode(new VariableReferenceNode("a"), OperationNode.PossibleOperations.MULTIPLY, new ConstantNode(2));
+        ref = new OperationNode(new VariableReferenceNode("a"), OperationNode.PossibleOperations.MULTIPLY, rightValue);
+        assertEquals(ref.toString(), p.ParseOperation().get().toString());
+        l = new Lexer("(a*2)/(2/a)");
+        p = new Parser(l.getTokens());
+        leftValue = new OperationNode(new VariableReferenceNode("a"), OperationNode.PossibleOperations.MULTIPLY, new ConstantNode(2));
+        rightValue = new OperationNode(new ConstantNode(2), OperationNode.PossibleOperations.DIVIDE, new VariableReferenceNode("a"));
+        ref = new OperationNode(leftValue, OperationNode.PossibleOperations.DIVIDE, rightValue);
+        assertEquals(ref.toString(), p.ParseOperation().get().toString());
+
+        Exception thrown = assertThrows(Exception.class, () -> {
+            lexer = new Lexer("x/");
+            Parser p2 = new Parser(lexer.getTokens());
+            p2.ParseOperation();
+        });
+        Assertions.assertEquals("Invalid Term! Must be in the form of \"FACTOR *|/ FACTOR\"", thrown.getMessage());
+
+        thrown = assertThrows(Exception.class, () -> {
+            lexer = new Lexer("*e");
+            Parser p2 = new Parser(lexer.getTokens());
+            p2.ParseOperation();
+        });
+        Assertions.assertEquals("Invalid Term! Must be in the form of \"FACTOR *|/ FACTOR\"", thrown.getMessage());
+
+    }
+
+    @Test
+    public void ParseConcatination() throws Exception{
+        // Tilde
+        Lexer l = new Lexer("\"test\" \"test\"");
+        Parser p = new Parser(l.getTokens());
+        OperationNode ref = new OperationNode(new ConstantNode("test"), OperationNode.PossibleOperations.CONCATENATION, new ConstantNode("test"));
+        assertEquals(ref.toString(), p.ParseOperation().get().toString());
+        // REGEXP
+        l = new Lexer("\"test\" \"test\" \"test\"");
+        p = new Parser(l.getTokens());
+        OperationNode rightValue = new OperationNode(new ConstantNode("test"), OperationNode.PossibleOperations.CONCATENATION, new ConstantNode("test"));
+        ref = new OperationNode(new ConstantNode("test"), OperationNode.PossibleOperations.CONCATENATION, rightValue);
+        assertEquals(ref.toString(), p.ParseOperation().get().toString());
+    }
+
+    @Test
+    public void ParseBooleanCompares() throws Exception{
+        //a < 2
+        Lexer l = new Lexer("(a+2) < 2");
+        Parser p = new Parser(l.getTokens());
+        OperationNode lValue = new OperationNode(new VariableReferenceNode("a"), OperationNode.PossibleOperations.ADD, new ConstantNode(2));
+        OperationNode ref = new OperationNode(lValue, OperationNode.PossibleOperations.LT, new ConstantNode(2));
+        assertEquals(ref.toString(), p.ParseOperation().get().toString());
+        // 2 <= a
+        l = new Lexer("2 <= (a/2)");
+        p = new Parser(l.getTokens());
+        OperationNode rValue = new OperationNode(new VariableReferenceNode("a"), OperationNode.PossibleOperations.DIVIDE, new ConstantNode(2));
+        ref = new OperationNode(new ConstantNode(2), OperationNode.PossibleOperations.LE, rValue);
+        assertEquals(ref.toString(), p.ParseOperation().get().toString());
+        // 2 != a
+        l = new Lexer("2 != a + 2");
+        p = new Parser(l.getTokens());
+        rValue = new OperationNode(new VariableReferenceNode("a"), OperationNode.PossibleOperations.ADD, new ConstantNode(2));
+        ref = new OperationNode(new ConstantNode(2), OperationNode.PossibleOperations.NE, rValue);
+        assertEquals(ref.toString(), p.ParseOperation().get().toString());
+        // a == 2
+        l = new Lexer("a == 2");
+        p = new Parser(l.getTokens());
+        ref = new OperationNode(new VariableReferenceNode("a"), OperationNode.PossibleOperations.EQ, new ConstantNode(2));
+        assertEquals(ref.toString(), p.ParseOperation().get().toString());
+        // 2 > a
+        l = new Lexer("a > 2");
+        p = new Parser(l.getTokens());
+        ref = new OperationNode(new VariableReferenceNode("a"), OperationNode.PossibleOperations.GT, new ConstantNode(2));
+        assertEquals(ref.toString(), p.ParseOperation().get().toString());
+        // a <= 2
+        l = new Lexer("a <= 2");
+        p = new Parser(l.getTokens());
+        ref = new OperationNode(new VariableReferenceNode("a"), OperationNode.PossibleOperations.LE, new ConstantNode(2));
+        assertEquals(ref.toString(), p.ParseOperation().get().toString());
+        // Check for AND
+        l = new Lexer("(n == 2) && (a == 1)");
+        p = new Parser(l.getTokens());
+        lValue = new OperationNode(new VariableReferenceNode("n"), OperationNode.PossibleOperations.EQ, new ConstantNode(2));
+        rValue = new OperationNode(new VariableReferenceNode("a"), OperationNode.PossibleOperations.EQ, new ConstantNode(1));
+        ref = new OperationNode(lValue, OperationNode.PossibleOperations.AND, rValue);
+        assertEquals(ref.toString(), p.ParseOperation().get().toString());
+        // Check for OR
+        l = new Lexer("(n == 2) || (a == 1)");
+        p = new Parser(l.getTokens());
+        ref = new OperationNode(lValue, OperationNode.PossibleOperations.OR, rValue);
+        assertEquals(ref.toString(), p.ParseOperation().get().toString());
+        Exception thrown = assertThrows(Exception.class, () -> {
+            lexer = new Lexer("a < ");
+            Parser p2 = new Parser(lexer.getTokens());
+            p2.ParseOperation();
+        });
+        Assertions.assertEquals("Must have another value in order to make a comparison! Format must be (EXRESSION) (COMPARISON EXPRESSION) (EXPRESSION) ex: (x < 3)", thrown.getMessage());
+
+        thrown = assertThrows(Exception.class, () -> {
+            lexer = new Lexer(" < 3");
+            Parser p2 = new Parser(lexer.getTokens());
+            p2.ParseOperation();
+        });
+        Assertions.assertEquals("Must have another value in order to make a comparison! Format must be (EXRESSION) (COMPARISON EXPRESSION) (EXPRESSION) ex: (x < 3)", thrown.getMessage());
+
+        thrown = assertThrows(Exception.class, () -> {
+            lexer = new Lexer("~ b");
+            Parser p2 = new Parser(lexer.getTokens());
+            p2.ParseOperation();
+        });
+        Assertions.assertEquals("Must have a valid satatement to match expressions! ex: EXPRESSION !~ | ~ EXPRESSION", thrown.getMessage());
+
+        thrown = assertThrows(Exception.class, () -> {
+            lexer = new Lexer("a !~");
+            Parser p2 = new Parser(lexer.getTokens());
+            p2.ParseOperation();
+        });
+        Assertions.assertEquals("Must have a valid satatement to match expressions! ex: EXPRESSION !~ | ~ EXPRESSION", thrown.getMessage());
+        thrown = assertThrows(Exception.class, () -> {
+            lexer = new Lexer("&& a");
+            Parser p2 = new Parser(lexer.getTokens());
+            p2.ParseOperation();
+        });
+        Assertions.assertEquals("Must have a valid AND statement! ex: EXP && EXP", thrown.getMessage());
+
+        thrown = assertThrows(Exception.class, () -> {
+            lexer = new Lexer("a && ");
+            Parser p2 = new Parser(lexer.getTokens());
+            p2.ParseOperation();
+        });
+        Assertions.assertEquals("Must have a valid AND statement! ex: EXP && EXP", thrown.getMessage());
+
+        thrown = assertThrows(Exception.class, () -> {
+            lexer = new Lexer("|| a");
+            Parser p2 = new Parser(lexer.getTokens());
+            p2.ParseOperation();
+        });
+        Assertions.assertEquals("Invalid OR statement! ex: EXPRESSION || EXPRESSION", thrown.getMessage());
+
+        thrown = assertThrows(Exception.class, () -> {
+            lexer = new Lexer("a || ");
+            Parser p2 = new Parser(lexer.getTokens());
+            p2.ParseOperation();
+        });
+        Assertions.assertEquals("Invalid OR statement! ex: EXPRESSION || EXPRESSION", thrown.getMessage());
+    }
+
+    @Test
+    public void ParseMatch() throws Exception{
+        Lexer l = new Lexer("a~b");
+        Parser p = new Parser(l.getTokens());
+        OperationNode ref = new OperationNode(new VariableReferenceNode("a"), OperationNode.PossibleOperations.TILDE, new VariableReferenceNode("b"));
+        assertEquals(ref.toString(), p.ParseOperation().get().toString());
+        l = new Lexer("a!~b");
+        p = new Parser(l.getTokens());
+        ref = new OperationNode(new VariableReferenceNode("a"), OperationNode.PossibleOperations.REGEXP, new VariableReferenceNode("b"));
+        assertEquals(ref.toString(), p.ParseOperation().get().toString());
+
+    }
+
+    @Test
+    public void INOperations() throws Exception{
+        // n in a[i++]
+        Lexer l = new Lexer("n in a[i++]");
+        Parser p = new Parser(l.getTokens());
+        VariableReferenceNode rValue = new VariableReferenceNode("a", Optional.of(new OperationNode(new VariableReferenceNode("i"), OperationNode.PossibleOperations.POSTINC)));
+        OperationNode ref = new OperationNode(new VariableReferenceNode("n"), OperationNode.PossibleOperations.IN, rValue);
+        assertEquals(ref.toString(), p.ParseOperation().get().toString());
+        // n in a[2]
+        l = new Lexer("n in a[2]");
+        p = new Parser(l.getTokens());
+        rValue = new VariableReferenceNode("a", Optional.of(new ConstantNode(2)));
+        ref = new OperationNode(new VariableReferenceNode("n"), OperationNode.PossibleOperations.IN, rValue);
+        assertEquals(ref.toString(), p.ParseOperation().get().toString());
+        l = new Lexer("2 in a[2]");
+        p = new Parser(l.getTokens());
+        ref = new OperationNode(new ConstantNode(2), OperationNode.PossibleOperations.IN, rValue);
+        assertEquals(ref.toString(), p.ParseOperation().get().toString());
+        l = new Lexer("2 in a[2][n]");
+        p = new Parser(l.getTokens());
+        rValue = new VariableReferenceNode("a", Optional.of(new ConstantNode(2)), Optional.of(new VariableReferenceNode("n")));
+        ref = new OperationNode(new ConstantNode(2), OperationNode.PossibleOperations.IN, rValue);
+        assertEquals(ref.toString(), p.ParseOperation().get().toString());
+        l = new Lexer("n in a[2][2]");
+        p = new Parser(l.getTokens());
+        rValue = new VariableReferenceNode("a", Optional.of(new ConstantNode(2)), Optional.of(new ConstantNode(2)));
+        ref = new OperationNode(new VariableReferenceNode("n"), OperationNode.PossibleOperations.IN, rValue);
+        assertEquals(ref.toString(), p.ParseOperation().get().toString());
+        Exception thrown = assertThrows(Exception.class, () -> {
+            lexer = new Lexer(" in a[2]");
+            Parser p2 = new Parser(lexer.getTokens());
+            p2.ParseOperation();
+
+        });
+        Assertions.assertEquals("Incomplete IN condition! Must be in the form of EXPRESSION IN ARRAY", thrown.getMessage());
+
+        thrown = assertThrows(Exception.class, () -> {
+            lexer = new Lexer("2 in ");
+            Parser p2 = new Parser(lexer.getTokens());
+            p2.ParseOperation();
+        });
+        Assertions.assertEquals("Incomplete IN condition! Must be in the form of EXPRESSION IN ARRAY", thrown.getMessage());
+
+        thrown = assertThrows(Exception.class, () -> {
+            lexer = new Lexer("2 in 2");
+            Parser p2 = new Parser(lexer.getTokens());
+            p2.ParseOperation();
+        });
+        Assertions.assertEquals("Not an array! Must be a valid array! Must be in the form of EXPRESSION IN ARRAY", thrown.getMessage());
+
+        thrown = assertThrows(Exception.class, () -> {
+            lexer = new Lexer("2 in a");
+            Parser p2 = new Parser(lexer.getTokens());
+            p2.ParseOperation();
+        });
+        Assertions.assertEquals("Not an array! Must be a valid array! Must be in the form of EXPRESSION IN ARRAY", thrown.getMessage());
+
+    }
+
+
+    @Test
+    public void ParseTernary() throws Exception{
+        Lexer l = new Lexer("n==2? (1+1): m");
+        Parser p = new Parser(l.getTokens());
+        Node Condition = new OperationNode(new VariableReferenceNode("n"), OperationNode.PossibleOperations.EQ, new ConstantNode(2));
+        Node Consequent = new OperationNode(new ConstantNode(1), OperationNode.PossibleOperations.ADD, new ConstantNode(1));
+        Node Alternate = new VariableReferenceNode("m");
+        TernaryNode ref = new TernaryNode(Condition, Consequent, Alternate);
+        assertEquals(ref.toString(), p.ParseOperation().get().toString());
+        l = new Lexer("2 != e? n: 2+m");
+        p = new Parser(l.getTokens());
+        Condition = new OperationNode(new ConstantNode(2), OperationNode.PossibleOperations.NE, new VariableReferenceNode("e"));
+        Consequent = new VariableReferenceNode("n");
+        Alternate = new OperationNode(new ConstantNode(2), OperationNode.PossibleOperations.ADD, new VariableReferenceNode("m"));
+        ref = new TernaryNode(Condition, Consequent, Alternate);
+        assertEquals(ref.toString(), p.ParseOperation().get().toString());
+        Exception thrown = assertThrows(Exception.class, () -> {
+            lexer = new Lexer("? (2):(2)");
+            Parser p2 = new Parser(lexer.getTokens());
+            p2.ParseOperation();
+        });
+        Assertions.assertEquals("Invalid TernaryStatement! Must be in the form of EXP? EXP:EXP", thrown.getMessage());
+
+        thrown = assertThrows(Exception.class, () -> {
+            lexer = new Lexer("33? :(2)");
+            Parser p2 = new Parser(lexer.getTokens());
+            p2.ParseOperation();
+        });
+        Assertions.assertEquals("Invalid TernaryStatement! Must be in the form of EXP? EXP:EXP", thrown.getMessage());
+
+        thrown = assertThrows(Exception.class, () -> {
+            lexer = new Lexer("33? :(2) :");
+            Parser p2 = new Parser(lexer.getTokens());
+            p2.ParseOperation();
+        });
+        Assertions.assertEquals("Invalid TernaryStatement! Must be in the form of EXP? EXP:EXP", thrown.getMessage());
+
+    }
+
+    @Test
+    public void ParseAssignment() throws Exception {
+        Lexer l = new Lexer("c += 2");
+        Parser p = new Parser(l.getTokens());
+        VariableReferenceNode lValue = new VariableReferenceNode("c");
+        OperationNode rValue = new OperationNode(lValue, OperationNode.PossibleOperations.ADD, new ConstantNode(2));
+        AssignmentNode ref = new AssignmentNode(lValue, rValue);
+        assertEquals(ref.toString(), p.ParseOperation().get().toString());
+        // Modulo
+        l = new Lexer("c %= 6");
+        p = new Parser(l.getTokens());
+        rValue = new OperationNode(lValue, OperationNode.PossibleOperations.MODULO, new ConstantNode(6));
+        ref = new AssignmentNode(lValue, rValue);
+        assertEquals(ref.toString(), p.ParseOperation().get().toString());
+        // Times
+        l = new Lexer("c *= g");
+        p = new Parser(l.getTokens());
+        rValue = new OperationNode(lValue, OperationNode.PossibleOperations.MULTIPLY, new VariableReferenceNode("g"));
+        ref = new AssignmentNode(lValue, rValue);
+        assertEquals(ref.toString(), p.ParseOperation().get().toString());
+        // Divide
+        l = new Lexer("c /= f");
+        p = new Parser(l.getTokens());
+        rValue = new OperationNode(lValue, OperationNode.PossibleOperations.DIVIDE, new VariableReferenceNode("f"));
+        ref = new AssignmentNode(lValue, rValue);
+        assertEquals(ref.toString(), p.ParseOperation().get().toString());
+        // Plus
+        l = new Lexer("c += (200^f)");
+        p = new Parser(l.getTokens());
+        OperationNode innerRValue = new OperationNode(new ConstantNode(200), OperationNode.PossibleOperations.EXPONENT, new VariableReferenceNode("f"));
+        rValue = new OperationNode(lValue, OperationNode.PossibleOperations.ADD, innerRValue);
+        ref = new AssignmentNode(lValue, rValue);
+        assertEquals(ref.toString(), p.ParseOperation().get().toString());
+        // Minus
+        l = new Lexer("c -= h");
+        p = new Parser(l.getTokens());
+        rValue = new OperationNode(lValue, OperationNode.PossibleOperations.SUBTRACT, new VariableReferenceNode("h"));
+        ref = new AssignmentNode(lValue, rValue);
+        assertEquals(ref.toString(), p.ParseOperation().get().toString());
+        // Assign
+        l = new Lexer("c = 2");
+        p = new Parser(l.getTokens());
+        rValue = new OperationNode(lValue, OperationNode.PossibleOperations.ASSIGN, new ConstantNode(2));
+        ref = new AssignmentNode(lValue, rValue);
+        assertEquals(ref.toString(), p.ParseOperation().get().toString());
+        Exception thrown = assertThrows(Exception.class, () -> {
+            lexer = new Lexer(" *= n");
+            Parser p2 = new Parser(lexer.getTokens());
+            p2.ParseOperation();
+        });
+        Assertions.assertEquals("Assignment invalid! Must be in the form of VARIABLE OPERATION '=' EXPRESSION", thrown.getMessage());
+
+        thrown = assertThrows(Exception.class, () -> {
+            lexer = new Lexer("s *= ");
+            Parser p2 = new Parser(lexer.getTokens());
+            p2.ParseOperation();
+        });
+        Assertions.assertEquals("Assignment invalid! Must be in the form of VARIABLE OPERATION '=' EXPRESSION", thrown.getMessage());
+
+        thrown = assertThrows(Exception.class, () -> {
+            lexer = new Lexer("2 *= ");
+            Parser p2 = new Parser(lexer.getTokens());
+            p2.ParseOperation();
+        });
+        Assertions.assertEquals("Assignment invalid! Must be in the form of VARIABLE OPERATION '=' EXPRESSION", thrown.getMessage());
+
+    }
+
+    // Test for incomplete array declarations
+    @Test
+    public void ParseArrayErrors(){
+        Exception thrown = assertThrows(Exception.class, () -> {
+            lexer = new Lexer("a[");
+            Parser p = new Parser(lexer.getTokens());
+            p.ParseOperation();
+        });
+        Assertions.assertEquals("Error! Complete a full operation with a closing brace for the array! ex: VARIABLE[OPERATION]", thrown.getMessage());
+
+        thrown = assertThrows(Exception.class, () -> {
+            lexer = new Lexer("a[2][");
+            Parser p = new Parser(lexer.getTokens());
+            p.ParseOperation();
+        });
+        Assertions.assertEquals("Must complete 2d array with a closing brace! ex: VARIABLE[OPERATION][OPERATION]", thrown.getMessage());
+    }
+
+    @Test public void ParseIf() throws Exception{
+        lexer = new Lexer("if(a == 2)\nmyFunction()");
+        Parser p = new Parser(lexer.getTokens());
+        OperationNode Condition = new OperationNode(new VariableReferenceNode("a"), OperationNode.PossibleOperations.EQ, new ConstantNode(2));
+        FunctionCallNode funcCall = new FunctionCallNode("myFunction");
+        BlockNode content = new BlockNode(funcCall);
+        IfNode reference = new IfNode(Condition, content);
+        assertEquals(reference.toString(), p.ParseStatement().get().toString());
+        lexer  = new Lexer("if(a==2)\n{\nmyFunction()}\nelse if(a == 1)\nsuperFunction()");
+        p = new Parser(lexer.getTokens());
+        OperationNode Condition2 = new OperationNode(new VariableReferenceNode("a"), OperationNode.PossibleOperations.EQ, new ConstantNode(1));
+        FunctionCallNode newFuncCall = new FunctionCallNode("superFunction");
+        BlockNode newContent = new BlockNode(newFuncCall);
+        IfNode elseIfReference1 = new IfNode(Condition2, newContent);
+        reference = new IfNode(Condition, content, Optional.of(elseIfReference1));
+        assertEquals(reference.toString(), p.ParseStatement().get().toString());
+        lexer = new Lexer("if(a==2)\n{myFunction()}else if(a == 1)\n{superFunction()}else if(a==1)\n{myFunction()}else\nsuperFunction()");
+        p = new Parser(lexer.getTokens());
+        IfNode elseReference = new IfNode(newContent);
+        IfNode elseIfReference2 = new IfNode(Condition2, content,Optional.of(elseReference));
+        elseIfReference1 = new IfNode(Condition2, newContent, Optional.of(elseIfReference2));
+        reference = new IfNode(Condition, content, Optional.of(elseIfReference1));
+        assertEquals(reference.toString(), p.ParseStatement().get().toString());
+        Exception thrown = assertThrows(Exception.class, () -> {
+            lexer = new Lexer("if()");
+            Parser p2 = new Parser(lexer.getTokens());
+            p2.ParseStatement();
+        });
+        Assertions.assertEquals("If must have a Condition! Ex: If(EXPR){STATEMENT}", thrown.getMessage());
+
+        thrown = assertThrows(Exception.class, () -> {
+            lexer = new Lexer("if(a == 1)");
+            Parser p2 = new Parser(lexer.getTokens());
+            p2.ParseStatement();
+        });
+        Assertions.assertEquals("Error! File ended before program could parse block!", thrown.getMessage());
+
+        thrown = assertThrows(Exception.class, () -> {
+
+            lexer = new Lexer("else\na = 1");
+            Parser p2 = new Parser(lexer.getTokens());
+            p2.ParseStatement();
+        });
+        Assertions.assertEquals("Cannot call 'else' and 'else if' outside of any initial if statement!", thrown.getMessage());
+
+        thrown = assertThrows(Exception.class, () -> {
+
+            lexer = new Lexer("else if\na = 1");
+            Parser p2 = new Parser(lexer.getTokens());
+            p2.ParseStatement();
+        });
+        Assertions.assertEquals("Cannot call 'else' and 'else if' outside of any initial if statement!", thrown.getMessage());
+
+        thrown = assertThrows(Exception.class, () -> {
+
+            lexer = new Lexer("if(i == 1)\ndoSomething()\nelse if(r == 3){a = 1}\nelse(f == 2){}");
+            Parser p2 = new Parser(lexer.getTokens());
+            p2.ParseStatement();
+        });
+        Assertions.assertEquals("Else statements cannot have parameters!", thrown.getMessage());
+    }
+
+    @Test
+    public void ParseFor() throws Exception{
+        lexer = new Lexer("for(i = 0; i < 3; i++){i = 0}");
+        Parser p = new Parser(lexer.getTokens());
+        VariableReferenceNode i = new VariableReferenceNode("i");
+        ConstantNode zero = new ConstantNode(0);
+        ConstantNode three = new ConstantNode(3);
+        OperationNode Statement = new OperationNode(i, OperationNode.PossibleOperations.ASSIGN, zero);
+        AssignmentNode forPart1 = new AssignmentNode(i,Statement);
+        OperationNode forPart2 = new OperationNode(i, OperationNode.PossibleOperations.LT, three);
+        OperationNode forPart3 = new OperationNode(i, OperationNode.PossibleOperations.POSTINC);
+        LinkedList<Node> Params = new LinkedList<Node>();
+        Params.add(forPart1);
+        Params.add(forPart2);
+        Params.add(forPart3);
+        ForNode ref = new ForNode(Params, new BlockNode(forPart1));
+        assertEquals(ref.toString(), p.ParseStatement().get().toString());
+        lexer = new Lexer("for(i in a[2]){i = 0}");
+        p = new Parser(lexer.getTokens());
+        VariableReferenceNode a = new VariableReferenceNode("a", Optional.of(new ConstantNode(2)));
+        OperationNode inParams = new OperationNode(i, OperationNode.PossibleOperations.IN, a);
+        ForEachNode refFE = new ForEachNode(inParams, new BlockNode(forPart1));
+        assertEquals(refFE.toString(), p.ParseStatement().get().toString());
+        Exception thrown = assertThrows(Exception.class, () -> {
+
+            lexer = new Lexer("for(){}");
+            Parser p2 = new Parser(lexer.getTokens());
+            p2.ParseStatement();
+        });
+        Assertions.assertEquals("For loop params cannot be empty!", thrown.getMessage());
+
+        thrown = assertThrows(Exception.class, () -> {
+
+            lexer = new Lexer("for(i == 1; a++){}");
+            Parser p2 = new Parser(lexer.getTokens());
+            p2.ParseStatement();
+        });
+        Assertions.assertEquals("Error! For loop params must have a valid condition! ex: for(expr;expr;expr){}", thrown.getMessage());
+        thrown = assertThrows(Exception.class, () -> {
+
+            lexer = new Lexer("for i == 1; a++){}");
+            Parser p2 = new Parser(lexer.getTokens());
+            p2.ParseStatement();
+        });
+        Assertions.assertEquals("Improper for loop format! For loop must have a structure of for(EXP;EXP;EXP|EXP in ARR[])", thrown.getMessage());
+    }
+
+    @Test
+    public void ParseWhileAndDoWhile() throws Exception{
+        lexer = new Lexer("while(a == 2)\nmyFunction()");
+        Parser p = new Parser(lexer.getTokens());
+        OperationNode Condition = new OperationNode(new VariableReferenceNode("a"), OperationNode.PossibleOperations.EQ, new ConstantNode(2));
+        FunctionCallNode funcCall = new FunctionCallNode("myFunction");
+        BlockNode content = new BlockNode(funcCall);
+        WhileNode reference = new WhileNode(Condition, content);
+        assertEquals(reference.toString(), p.ParseStatement().get().toString());
+        lexer = new Lexer("do{myFunction()}\nwhile(a == 2)");
+        p = new Parser(lexer.getTokens());
+        DoWhileNode DoWhileReference = new DoWhileNode(Condition, content);
+        assertEquals(DoWhileReference.toString(), p.ParseStatement().get().toString());
+        Exception thrown = assertThrows(Exception.class, () -> {
+
+            lexer = new Lexer("while(){}");
+            Parser p2 = new Parser(lexer.getTokens());
+            p2.ParseStatement();
+        });
+        Assertions.assertEquals("Must be a valid WHILE loop! EX: While(EXP){}", thrown.getMessage());
+
+        thrown = assertThrows(Exception.class, () -> {
+
+            lexer = new Lexer("do{} (a + 1)");
+            Parser p2 = new Parser(lexer.getTokens());
+            p2.ParseStatement();
+        });
+        Assertions.assertEquals("Must have a while at the end of a do-while statement! ex: do{} while(expr)", thrown.getMessage());
+
+        thrown = assertThrows(Exception.class, () -> {
+
+            lexer = new Lexer("do{}while()");
+            Parser p2 = new Parser(lexer.getTokens());
+            p2.ParseStatement();
+        });
+        Assertions.assertEquals("Must have a condition for a do-while loop! Ex: do{} while(EXPR)", thrown.getMessage());
+    }
+
+    @Test
+    public void ParseContinueBreak() throws Exception{
+        lexer = new Lexer("break");
+        Parser p = new Parser(lexer.getTokens());
+        assertEquals((new BreakNode()).toString(), (p.ParseStatement().get().toString()));
+        lexer = new Lexer("continue");
+        p = new Parser(lexer.getTokens());
+        assertEquals((new ContinueNode()).toString(), (p.ParseStatement().get().toString()));
+    }
+
+    @Test
+    public void ParseDeleteReturn() throws Exception{
+        lexer = new Lexer("return a+1");
+        Parser p = new Parser(lexer.getTokens());
+        OperationNode refContent = new OperationNode(new VariableReferenceNode("a"), OperationNode.PossibleOperations.ADD, new ConstantNode(1));
+        ReturnNode ref = new ReturnNode(refContent);
+        assertEquals(ref.toString(), p.ParseStatement().get().toString());
+        lexer = new Lexer("delete a[test]");
+        p = new Parser(lexer.getTokens());
+        DeleteNode refDelete = new DeleteNode(new VariableReferenceNode("a", Optional.of(new VariableReferenceNode("test"))));
+        assertEquals(refDelete.toString(), p.ParseStatement().get().toString());
+        Exception thrown = assertThrows(Exception.class, () -> {
+
+            lexer = new Lexer("return \n");
+            Parser p2 = new Parser(lexer.getTokens());
+            p2.ParseStatement();
+        });
+        Assertions.assertEquals("Must return a value for a function! Ex: return (expr)", thrown.getMessage());
+        thrown = assertThrows(Exception.class, () -> {
+
+            lexer = new Lexer("delete \n");
+            Parser p2 = new Parser(lexer.getTokens());
+            p2.ParseStatement();
+        });
+        Assertions.assertEquals("Must have a statement accompanying the Delete statement! Ex: 'delete: EXPR'", thrown.getMessage());
+        thrown = assertThrows(Exception.class, () -> {
+
+            lexer = new Lexer("delete 2");
+            Parser p2 = new Parser(lexer.getTokens());
+            p2.ParseStatement();
+        });
+        Assertions.assertEquals("Target must be an array element! Ex: delete a[\"test\"]", thrown.getMessage());
+    }
+
+    @Test
+    public void ParseFunctionCalls() throws Exception{
+        lexer = new Lexer("myFunction()");
+        Parser p = new Parser(lexer.getTokens());
+        FunctionCallNode ref = new FunctionCallNode("myFunction");
+        assertEquals(ref.toString(), p.ParseStatement().get().toString());
+        lexer = new Lexer("myFunction(1)");
+        p = new Parser(lexer.getTokens());
+        LinkedList<Node> params = new LinkedList<Node>();
+        params.add(new ConstantNode(1));
+        ref = new FunctionCallNode("myFunction", params);
+        assertEquals(ref.toString(), p.ParseStatement().get().toString());
+        params.clear();
+        lexer = new Lexer("myFunction(1,n,3,5)");
+        p = new Parser(lexer.getTokens());
+        params.add(new ConstantNode(1));
+        params.add(new VariableReferenceNode("n"));
+        params.add(new ConstantNode(3));
+        params.add(new ConstantNode(5));
+        ref = new FunctionCallNode("myFunction", params);
+        assertEquals(ref.toString(), p.ParseStatement().get().toString());
+        params.clear();
+        lexer = new Lexer("myFunction(myNewFunction())");
+        p = new Parser(lexer.getTokens());
+        FunctionCallNode innerFunc = new FunctionCallNode("myNewFunction");
+        params.add(innerFunc);
+        ref = new FunctionCallNode("myFunction", params);
+        assertEquals(ref.toString(), p.ParseStatement().get().toString());
+        Exception thrown = assertThrows(Exception.class, () -> {
+
+            lexer = new Lexer("myFunction(a,)");
+            Parser p2 = new Parser(lexer.getTokens());
+            p2.ParseStatement();
+        });
+        Assertions.assertEquals("Incomplete Function Call!", thrown.getMessage());
+
+    }
+
+    @Test
+    public void ParseBuiltInMethods() throws Exception {
+        lexer = new Lexer("next");
+        Parser parser = new Parser(lexer.getTokens());
+        FunctionCallNode ref = new FunctionCallNode("next");
+        assertEquals(ref.toString(), parser.ParseStatement().get().toString());
+        lexer = new Lexer("nextfile");
+        parser = new Parser(lexer.getTokens());
+        ref = new FunctionCallNode("nextfile");
+        assertEquals(ref.toString(), parser.ParseStatement().get().toString());
+        lexer = new Lexer("exit");
+        parser = new Parser(lexer.getTokens());
+        ref = new FunctionCallNode("exit", Optional.empty());
+        assertEquals(ref.toString(), parser.ParseStatement().get().toString());
+        lexer = new Lexer("exit 0");
+        parser = new Parser(lexer.getTokens());
+        ref = new FunctionCallNode("exit", Optional.of(new ConstantNode(0)));
+        assertEquals(ref.toString(), parser.ParseStatement().get().toString());
+        lexer = new Lexer("exit $0");
+        parser = new Parser(lexer.getTokens());
+        OperationNode refInside = new OperationNode(new ConstantNode(0), OperationNode.PossibleOperations.DOLLAR);
+        ref = new FunctionCallNode("exit", Optional.of(refInside));
+        assertEquals(ref.toString(), parser.ParseStatement().get().toString());
+        // exit has wrong param type/has more than two params
+        Exception thrown = assertThrows(Exception.class, () -> {
+
+            lexer = new Lexer("exit variable");
+            Parser p2 = new Parser(lexer.getTokens());
+            p2.ParseStatement();
+        });
+        Assertions.assertEquals("Error! 'exit' cannot accept any other condition besides an int! (Or none) Example: exit Optional[int]", thrown.getMessage());
+    }
+
+    @Test
+    public void prints() throws Exception{
+        lexer = new Lexer("print fOne, fTwo, fThree");
+        Parser parser = new Parser(lexer.getTokens());
+        LinkedList<Node> refParams = new LinkedList<Node>();
+        refParams.add(new VariableReferenceNode("fOne"));
+        refParams.add(new VariableReferenceNode("fTwo"));
+        refParams.add(new VariableReferenceNode("fThree"));
+        FunctionCallNode ref = new FunctionCallNode("print", refParams);
+        assertEquals(ref.toString(), parser.ParseStatement().get().toString());
+        lexer = new Lexer("printf \"%2f\", fOne, fTwo, fThree");
+        parser = new Parser(lexer.getTokens());
+        refParams.clear();
+        refParams.add(new ConstantNode("%2f"));
+        refParams.add(new VariableReferenceNode("fOne"));
+        refParams.add(new VariableReferenceNode("fTwo"));
+        refParams.add(new VariableReferenceNode("fThree"));
+        ref = new FunctionCallNode("printf", refParams);
+        assertEquals(ref.toString(), parser.ParseStatement().get().toString());
+        //print and printline is empty
+        Exception thrown = assertThrows(Exception.class, () -> {
+
+            lexer = new Lexer("print");
+            Parser p2 = new Parser(lexer.getTokens());
+            p2.ParseStatement();
+        });
+        Assertions.assertEquals("Error! Cannot use print/printf without statements!", thrown.getMessage());
+        thrown = assertThrows(Exception.class, () -> {
+
+            lexer = new Lexer("printf");
+            Parser p2 = new Parser(lexer.getTokens());
+            p2.ParseStatement();
+        });
+        Assertions.assertEquals("Error! Cannot use print/printf without statements!", thrown.getMessage());
+        // printf first parameter wrong
+        thrown = assertThrows(Exception.class, () -> {
+
+            lexer = new Lexer("printf v, var");
+            Parser p2 = new Parser(lexer.getTokens());
+            p2.ParseStatement();
+        });
+        Assertions.assertEquals("First parameter must be of a format type! Ex: printf \"Name: %s, Age: %d\\n\", name, age", thrown.getMessage());
+        // getline first param wrong
+        thrown = assertThrows(Exception.class, () -> {
+
+            lexer = new Lexer("getline \"v\", var");
+            Parser p2 = new Parser(lexer.getTokens());
+            p2.ParseStatement();
+        });
+        Assertions.assertEquals("First parameter of getline must be a variable! Ex: getline [var] Optional[filepath]", thrown.getMessage());
+        // getline second param wrong
+        thrown = assertThrows(Exception.class, () -> {
+
+            lexer = new Lexer("getline var, var");
+            Parser p2 = new Parser(lexer.getTokens());
+            p2.ParseStatement();
+        });
+        Assertions.assertEquals("getline with filepaths isn't supported!", thrown.getMessage());
+    }
+
+    private Path filePath;
+    private List<String> temp;
+    public void fileMaker(String[] s) throws IOException{
+        LinkedList<String> strings = new LinkedList<String>();
+        if(s.length == 0) {
+            strings.add("Hello this is line 1");
+            strings.add("Hello this is line 2");
+            strings.add("Hello this is line 3");
+            strings.add("Hello this is line 4");
+            strings.add("Hello this is line 5");
         }
-        catch(Exception e){
-            assertEquals("Function must have parenthesis!", e.getMessage());
+        else{
+            for(var i : s)
+                strings.add(i);
         }
-        try{
-            Lexer l = new Lexer("function test(\n\n");
-            l.Lex();
-            Parser p = new Parser(l.getTokens());
-            p.Parse();
-        }
-        catch(Exception e){
-            assertEquals("Function must have parenthesis!", e.getMessage());
-        }
-        try{
-            Lexer l = new Lexer("function test)\n\n");
-            l.Lex();
-            Parser p = new Parser(l.getTokens());
-            p.Parse();
-        }
-        catch(Exception e){
-            assertEquals("Function must have parenthesis!", e.getMessage());
-        }
+        filePath = Paths.get("input.txt");
+        temp = Files.readAllLines(filePath);
+        FileWriter fileWriter = new FileWriter("input.txt");
+        fileWriter.write("");
+        for (String line : strings) 
+            fileWriter.write(line + "\n"); // Write each line to the file with a newline character
+        fileWriter.close();
+    }
+
+    public void fileRestore() throws IOException {
+        FileWriter fileWriter = new FileWriter("input.txt");
+        fileWriter.write("");
+        for (String line : temp)
+            fileWriter.write(line + "\n"); // Write each line to the file with a newline character
+        fileWriter.close();
     }
     @Test
-    public void test27(){
-        try{
-            Lexer l = new Lexer("BEGIN\n{\nEND");
-            l.Lex();
-            Parser p = new Parser(l.getTokens());
-            p.Parse();
-        }
-        catch(Exception e){
-            assertEquals("Action not recognized!", e.getMessage());
-        }
+    public void LineManager() throws Exception, IOException {
+       fileMaker(new String[0]);
+       interpreter =  new Interpreter(new ProgramNode(), Optional.of(filePath));
+       interpreter.Manager.SplitAndAssign();
+        assertEquals( "5", interpreter.GlobalVariables.get("NF").toString());
+        assertEquals( "Hello", interpreter.GlobalVariables.get("$1").toString());
+        assertEquals( "1", interpreter.GlobalVariables.get("$5").toString());
+       for(int i = 1; i < 5; i++){
+           assertEquals( String.valueOf(i), interpreter.GlobalVariables.get("NR").toString());
+           assertEquals( "Hello this is line " + String.valueOf(i), interpreter.GlobalVariables.get("$0").toString());
+           assertEquals(interpreter.GlobalVariables.get("$5").toString(), String.valueOf(i));
+           interpreter.Manager.SplitAndAssign();
+       }
+        assertEquals(false, interpreter.Manager.SplitAndAssign());
+       fileRestore();
     }
     @Test
-    public void test28(){
-        try{
-            Lexer l = new Lexer("function t(t,)");
-            l.Lex();
-            Parser p = new Parser(l.getTokens());
-            p.Parse();
-        }
-        catch(Exception e){
-            assertEquals("Cannot have comma at the end of a parameter list!", e.getMessage());
-        }
+    public void SimpleBuiltInFunctionDefinitionNodes() throws Exception, IOException{
+        String[] s = new String[]{"uppercase", "LOWERCASE", "substring"};
+        fileMaker(s);
+        interpreter =  new Interpreter(new ProgramNode(), Optional.of(filePath));
+        interpreter.Manager.SplitAndAssign();
+        HashMap<String, InterpreterDataType> input = new HashMap<String, InterpreterDataType>();
+        input.put("string",interpreter.GlobalVariables.get("$0"));
+        BuiltInFunctionDefinitionNode node = (BuiltInFunctionDefinitionNode) interpreter.Functions.get("toupper");
+        assertEquals("UPPERCASE", node.Execute(input));
+        interpreter.Manager.SplitAndAssign();
+        input.put("string",interpreter.GlobalVariables.get("$0"));
+        node = (BuiltInFunctionDefinitionNode) interpreter.Functions.get("tolower");
+        assertEquals("lowercase", node.Execute(input));
+        interpreter.Manager.SplitAndAssign();
+        input.put("string",interpreter.GlobalVariables.get("$0"));
+        input.put("start", new InterpreterDataType("3"));
+        input.put("end", new InterpreterDataType("9"));
+        node = (BuiltInFunctionDefinitionNode) interpreter.Functions.get("substr");
+        assertEquals("string", node.Execute(input));
+        fileRestore();
+    }
+
+    @Test
+    public void SimpleBuiltInFunctionDefinitionNodeErrors() throws Exception, IOException{
+        fileMaker(new String[0]);
+        interpreter = new Interpreter(new ProgramNode(), Optional.of(filePath));
+        interpreter.Manager.SplitAndAssign();
+        HashMap<String, InterpreterDataType> input = new HashMap<String, InterpreterDataType>();
+        Exception thrown = assertThrows(Exception.class, () -> {
+            BuiltInFunctionDefinitionNode node = (BuiltInFunctionDefinitionNode) interpreter.Functions.get("toupper");
+            node.Execute(input);
+        });
+        Assertions.assertEquals("Error! toupper must have 1 parameter!", thrown.getMessage());
+        thrown = assertThrows(Exception.class, () -> {
+            BuiltInFunctionDefinitionNode node = (BuiltInFunctionDefinitionNode) interpreter.Functions.get("tolower");
+            node.Execute(input);
+        });
+        Assertions.assertEquals("Error! tolower must have 1 parameter!", thrown.getMessage());
+        thrown = assertThrows(Exception.class, () -> {
+            input.put("string", new InterpreterDataType("test1"));
+            input.put("string2", new InterpreterDataType("test2"));
+            BuiltInFunctionDefinitionNode node = (BuiltInFunctionDefinitionNode) interpreter.Functions.get("toupper");
+            node.Execute(input);
+        });
+        Assertions.assertEquals("Error! toupper must have 1 parameter!", thrown.getMessage());
+        thrown = assertThrows(Exception.class, () -> {
+            input.put("string", new InterpreterDataType("test1"));
+            input.put("string2", new InterpreterDataType("test2"));
+            BuiltInFunctionDefinitionNode node = (BuiltInFunctionDefinitionNode) interpreter.Functions.get("tolower");
+            node.Execute(input);
+        });
+        Assertions.assertEquals("Error! tolower must have 1 parameter!", thrown.getMessage());
+        input.clear();
+        thrown = assertThrows(Exception.class, () ->{
+            input.put("string", new InterpreterDataType("test"));
+            input.put("start", new InterpreterDataType("-1"));
+            input.put("end", new InterpreterDataType("1"));
+            BuiltInFunctionDefinitionNode node = (BuiltInFunctionDefinitionNode) interpreter.Functions.get("substr");
+            node.Execute(input);
+        });
+        Assertions.assertEquals("Warning! Substring is configured incorrectly!", thrown.getMessage());
+        thrown = assertThrows(Exception.class, () ->{
+            input.put("string", new InterpreterDataType("test"));
+            input.put("start", new InterpreterDataType("1"));
+            input.put("end", new InterpreterDataType("100"));
+            BuiltInFunctionDefinitionNode node = (BuiltInFunctionDefinitionNode) interpreter.Functions.get("substr");
+            node.Execute(input);
+        });
+        Assertions.assertEquals("Warning! Substring is configured incorrectly!", thrown.getMessage());
+        thrown = assertThrows(Exception.class, () ->{
+            input.put("string", new InterpreterDataType("test"));
+            input.put("start", new InterpreterDataType("1"));
+            input.put("end", new InterpreterDataType("2"));
+            input.put("test", new InterpreterDataType("test"));
+            BuiltInFunctionDefinitionNode node = (BuiltInFunctionDefinitionNode) interpreter.Functions.get("substr");
+            node.Execute(input);
+        });
+        Assertions.assertEquals("Warning! The substr method must have 3 and strictly 3 parameters! Ex: substr(str, 1,2)", thrown.getMessage());
+        fileRestore();
+    }
+
+    @Test
+    public void testNextAndGetline() throws Exception, IOException {
+        fileMaker(new String[0]);
+        interpreter = new Interpreter(new ProgramNode(), Optional.of(filePath));
+        interpreter.Manager.SplitAndAssign();
+        BuiltInFunctionDefinitionNode node = (BuiltInFunctionDefinitionNode) interpreter.Functions.get("next");
+        HashMap<String, InterpreterDataType> input = new HashMap<String, InterpreterDataType>();
+        node.Execute(input);
+        fileRestore();
+        assertEquals("2", interpreter.GlobalVariables.get("NR").toString());
+        node = (BuiltInFunctionDefinitionNode) interpreter.Functions.get("getline");
+        node.Execute(input);
+        assertEquals("3", interpreter.GlobalVariables.get("NR").toString());
+        input.put("variable", new InterpreterDataType("$1"));
+        assertEquals("1", node.Execute(input));
+        assertEquals("Hello this is line 4", interpreter.GlobalVariables.get("$1").toString());
+        input.clear();
+        input.put("variable", new InterpreterDataType("var"));
+        assertEquals("0", node.Execute(input));
+        assertEquals("Hello this is line 4", interpreter.GlobalVariables.get("$1").toString());
+        fileRestore();
+    }
+
+    @Test
+    public void testGsub() throws IOException, Exception {
+        String[] list = new String[]{"hello there", "hellohowareyou", "yeshhowareyou"};
+        fileMaker(list);
+        interpreter = new Interpreter(new ProgramNode(), Optional.of(filePath));
+        interpreter.Manager.SplitAndAssign();
+        BuiltInFunctionDefinitionNode node = (BuiltInFunctionDefinitionNode) interpreter.Functions.get("gsub");
+        HashMap<String, InterpreterDataType> input = new HashMap<String, InterpreterDataType>();
+        input.put("regexp", new InterpreterDataType("hello"));
+        input.put("replacement", new InterpreterDataType("TEST"));
+        assertEquals("1",node.Execute(input).toString());
+        assertEquals("TEST there", interpreter.GlobalVariables.get("$0").toString());
+        assertEquals("TEST", interpreter.GlobalVariables.get("$1").toString());
+        interpreter.Manager.SplitAndAssign();
+        input.put("target", new InterpreterDataType("hello"));
+        assertEquals("1",node.Execute(input).toString());
+        assertEquals("TEST", input.get("target").toString());
+        input.put("target", new InterpreterDataType("nothinghere"));
+        assertEquals("0",node.Execute(input).toString());
+        interpreter.Manager.SplitAndAssign();
+        assertEquals("0", node.Execute(input));
+        input.put("target", new InterpreterDataType("yeshelloyeshello"));
+        node.Execute(input);
+        assertEquals("yesTESTyesTEST", input.get("target").toString());
+        input.put("target", new InterpreterDataType("test"));
+        assertEquals("0", node.Execute(input));
+        fileRestore();
+    }
+
+    @Test
+    public void gsubErrors() throws IOException, Exception{
+        fileMaker(new String[0]);
+        interpreter = new Interpreter(new ProgramNode(), Optional.ofNullable(filePath));
+        HashMap<String, InterpreterDataType> input = new HashMap<String, InterpreterDataType>();
+        Exception thrown = assertThrows(Exception.class, () ->{
+            BuiltInFunctionDefinitionNode node = (BuiltInFunctionDefinitionNode) interpreter.Functions.get("gsub");
+            node.Execute(input);
+        });
+        Assertions.assertEquals("Invalid method call for gsub! must be in the form: gsub(regex, replacement, Optional[array])!", thrown.getMessage());
+        thrown = assertThrows(Exception.class, () ->{
+            input.put("regexp", new InterpreterDataType("test"));
+            input.put("replacement", new InterpreterDataType("test2"));
+            input.put("target", new InterpreterDataType("test3"));
+            input.put("test", new InterpreterDataType("test4"));
+            BuiltInFunctionDefinitionNode node = (BuiltInFunctionDefinitionNode) interpreter.Functions.get("gsub");
+            node.Execute(input);
+        });
+        Assertions.assertEquals("Invalid method call for gsub! must be in the form: gsub(regex, replacement, Optional[array])!", thrown.getMessage());
+        fileRestore();
     }
     @Test
-    public void test29(){
-        try{
-            Lexer l = new Lexer("function t(t");
-            l.Lex();
-            Parser p = new Parser(l.getTokens());
-            p.Parse();
-        }
-        catch(Exception e){
-            assertEquals("Must have parenthesis for proper parameter declaration!", e.getMessage());
-        }
+    public void testSub() throws IOException, Exception{
+        fileMaker(new String[]{"hello","hellohello","thislineshouldreturn0"});
+        interpreter = new Interpreter(new ProgramNode(), Optional.of(filePath));
+        interpreter.Manager.SplitAndAssign();
+        BuiltInFunctionDefinitionNode node = (BuiltInFunctionDefinitionNode) interpreter.Functions.get("sub");
+        HashMap<String, InterpreterDataType> input = new HashMap<String, InterpreterDataType>();
+        input.put("regexp", new InterpreterDataType("hello"));
+        input.put("replacement", new InterpreterDataType("TEST"));
+        assertEquals("1",node.Execute(input));
+        assertEquals("TEST", interpreter.GlobalVariables.get("$0").toString());
+        assertEquals("TEST", interpreter.GlobalVariables.get("$1").toString());
+        interpreter.Manager.SplitAndAssign();
+        assertEquals("1", node.Execute(input));
+        assertEquals("TESThello", interpreter.GlobalVariables.get("$0").toString());
+        interpreter.Manager.SplitAndAssign();
+        assertEquals("0", node.Execute(input));
+        input.put("target", new InterpreterDataType("yeshelloyeshello"));
+        node.Execute(input);
+        assertEquals("yesTESTyeshello", input.get("target").toString());
+        input.put("target", new InterpreterDataType("test"));
+        assertEquals("0", node.Execute(input));
+        fileRestore();
     }
+
+    @Test
+    public void testSubErrors() throws Exception{
+        fileMaker(new String[0]);
+        interpreter = new Interpreter(new ProgramNode(), Optional.of(filePath));
+        interpreter.Manager.SplitAndAssign();
+        HashMap<String, InterpreterDataType> input = new HashMap<String, InterpreterDataType>();
+        Exception thrown = assertThrows(Exception.class, () ->{
+            BuiltInFunctionDefinitionNode node = (BuiltInFunctionDefinitionNode) interpreter.Functions.get("sub");
+            node.Execute(input);
+        });
+        Assertions.assertEquals("Invalid method call for sub! must be in the form: sub(regex, replacement, Optional[array])!", thrown.getMessage());
+        thrown = assertThrows(Exception.class, () ->{
+            BuiltInFunctionDefinitionNode node = (BuiltInFunctionDefinitionNode) interpreter.Functions.get("sub");
+            input.put("target", new InterpreterDataType("test1"));
+            input.put("regexp", new InterpreterDataType("test2"));
+            input.put("replacement", new InterpreterDataType("test3"));
+            input.put("test", new InterpreterDataType("test4"));
+            node.Execute(input);
+        });
+        Assertions.assertEquals("Invalid method call for sub! must be in the form: sub(regex, replacement, Optional[array])!", thrown.getMessage());
+        fileRestore();
+    }
+
+    @Test
+    public void testMatch() throws Exception{
+        fileMaker(new String[0]);
+        interpreter = new Interpreter(new ProgramNode(), Optional.of(filePath));
+        HashMap<String, InterpreterDataType> input = new HashMap<String, InterpreterDataType>();
+        input.put("string", new InterpreterDataType("thiswillreturn0"));
+        input.put("pattern", new InterpreterDataType("wontwork"));
+        BuiltInFunctionDefinitionNode node = (BuiltInFunctionDefinitionNode) interpreter.Functions.get("match");
+        assertEquals("0",node.Execute(input));
+        input.clear();
+        input.put("string", new InterpreterDataType("thiswillreturnsomethingelse"));
+        input.put("pattern", new InterpreterDataType("return"));
+        assertEquals("9", node.Execute(input));
+        input.clear();
+        input.put("string", new InterpreterDataType("thiswillretur"));
+        input.put("pattern", new InterpreterDataType("return"));
+        assertEquals("0", node.Execute(input));
+        input.put("string", new InterpreterDataType("thiswillreturn"));
+        input.put("pattern", new InterpreterDataType("return"));
+        assertEquals("9", node.Execute(input));
+        input.put("string", new InterpreterDataType("thiswillreturn"));
+        input.put("pattern", new InterpreterDataType("this"));
+        assertEquals("1", node.Execute(input));
+        fileRestore();
+    }
+
+    @Test
+    public void testMatchErrors() throws Exception{
+        fileMaker(new String[0]);
+        interpreter = new Interpreter(new ProgramNode(), Optional.of(filePath));
+        HashMap<String, InterpreterDataType> input = new HashMap<String, InterpreterDataType>();
+        Exception thrown = assertThrows(Exception.class, () ->{
+            BuiltInFunctionDefinitionNode node = (BuiltInFunctionDefinitionNode) interpreter.Functions.get("match");
+            node.Execute(input);
+        });
+        Assertions.assertEquals("Illegal match declaration! The match method must be in the form: match(string, pattern)!", thrown.getMessage());
+        thrown = assertThrows(Exception.class, () ->{
+            input.put("string", new InterpreterDataType("testest"));
+            input.put("pattern", new InterpreterDataType("hello"));
+            input.put("test", new InterpreterDataType("test"));
+            BuiltInFunctionDefinitionNode node = (BuiltInFunctionDefinitionNode) interpreter.Functions.get("match");
+            node.Execute(input);
+        });
+        Assertions.assertEquals("Illegal match declaration! The match method must be in the form: match(string, pattern)!", thrown.getMessage());
+        fileRestore();
+    }
+
+    @Test
+    public void testSplit() throws Exception{
+        fileMaker(new String[0]);
+        interpreter = new Interpreter(new ProgramNode(), Optional.of(filePath));
+        HashMap<String, InterpreterDataType> input = new HashMap<String, InterpreterDataType>();
+        BuiltInFunctionDefinitionNode node = (BuiltInFunctionDefinitionNode) interpreter.Functions.get("split");
+        input.put("target", new InterpreterDataType("This/is/a/sentence/to/separate"));
+        input.put("separator", new InterpreterDataType("/"));
+        node.Execute(input);
+        assertEquals("(This,is,a,sentence,to,separate)", input.get("array").toString());
+        input.clear();
+        input.put("target", new InterpreterDataType("This/is/a/sentence/to/separate"));
+        input.put("separator", new InterpreterDataType("-"));
+        node.Execute(input);
+        assertEquals("(This/is/a/sentence/to/separate)", input.get("array").toString());
+        fileRestore();
+    }
+
+    @Test
+    public void testSplitErrors() throws Exception{
+        fileMaker(new String[0]);
+        interpreter = new Interpreter(new ProgramNode(), Optional.of(filePath));
+        HashMap<String, InterpreterDataType> input = new HashMap<String, InterpreterDataType>();
+        Exception thrown = assertThrows(Exception.class, () ->{
+            BuiltInFunctionDefinitionNode node = (BuiltInFunctionDefinitionNode) interpreter.Functions.get("split");
+            node.Execute(input);
+        });
+        Assertions.assertEquals("Incorrect method call for split! It must be in the form of: split(target, array, separator)!", thrown.getMessage());
+        thrown = assertThrows(Exception.class, () ->{
+            input.put("target", new InterpreterDataType("This/is/a/sentence/to/separate"));
+            input.put("separator", new InterpreterDataType("/"));
+            input.put("array", new InterpreterDataType());
+            input.put("test", new InterpreterDataType("test"));
+            BuiltInFunctionDefinitionNode node = (BuiltInFunctionDefinitionNode) interpreter.Functions.get("split");
+            node.Execute(input);
+        });
+        Assertions.assertEquals("Incorrect method call for split! It must be in the form of: split(target, array, separator)!", thrown.getMessage());
+        fileRestore();
+
+    }
+    @Test
+    public void testPrint() throws Exception{
+        fileMaker(new String[0]);
+        interpreter = new Interpreter(new ProgramNode(), Optional.of(filePath));
+        interpreter.Manager.SplitAndAssign();
+        HashMap<String, InterpreterDataType> input = new HashMap<String, InterpreterDataType>();
+        BuiltInFunctionDefinitionNode node = (BuiltInFunctionDefinitionNode) interpreter.Functions.get("print");
+        InterpreterArrayDataType content = new InterpreterArrayDataType();
+        content.put("Original string: ");
+        content.put(interpreter.GlobalVariables.get("$0").toString());
+        content.put(", First word: ");
+        content.put(interpreter.GlobalVariables.get("$1").toString());
+        content.put(", Second word: ");
+        content.put(interpreter.GlobalVariables.get("$2").toString());
+        input.put("content", content);
+        node.Execute(input);
+        assertEquals("Original string: Hello this is line 1, First word: Hello, Second word: this",interpreter.printContent);
+        fileRestore();
+    }
+
+    @Test
+    public void testPrintf() throws Exception{
+        fileMaker(new String[0]);
+        interpreter = new Interpreter(new ProgramNode(), Optional.of(filePath));
+        interpreter.Manager.SplitAndAssign();
+        HashMap<String, InterpreterDataType> input = new HashMap<String, InterpreterDataType>();
+        BuiltInFunctionDefinitionNode node = (BuiltInFunctionDefinitionNode) interpreter.Functions.get("printf");
+        InterpreterArrayDataType content = new InterpreterArrayDataType();
+        content.put("Original string: ");
+        content.put(interpreter.GlobalVariables.get("$0").toString());
+        content.put(", First word: ");
+        content.put(interpreter.GlobalVariables.get("$1").toString());
+        content.put(", Second word: ");
+        content.put(interpreter.GlobalVariables.get("$2").toString());
+        input.put("content", content);
+        node.Execute(input);
+        assertEquals("Format: %.6g, Result: Original string: Hello this is line 1, First word: Hello, Second word: this",interpreter.printContent);
+        input.put("format", new InterpreterDataType("testFormat"));
+        node.Execute(input);
+        assertEquals("Format: testFormat, Result: Original string: Hello this is line 1, First word: Hello, Second word: this", interpreter.printContent);
+        fileRestore();
+    }
+
+    @Test
+    public void testIndex() throws Exception{
+        fileMaker(new String[0]);
+        interpreter = new Interpreter(new ProgramNode(), Optional.of(filePath));
+        interpreter.Manager.SplitAndAssign();
+        HashMap<String, InterpreterDataType> input = new HashMap<String, InterpreterDataType>();
+        BuiltInFunctionDefinitionNode node = (BuiltInFunctionDefinitionNode) interpreter.Functions.get("index");
+        input.put("string", new InterpreterDataType("thiswillhaveasubstring"));
+        input.put("substring", new InterpreterDataType("will"));
+        assertEquals("5",node.Execute(input));
+        input.clear();
+        input.put("string", new InterpreterDataType("thiswillnothaveasubstring"));
+        input.put("substring", new InterpreterDataType("wont"));
+        assertEquals("0",node.Execute(input));
+        input.clear();
+        input.put("string", new InterpreterDataType("thiswillhaveasubstringattheveryend"));
+        input.put("substring", new InterpreterDataType("end"));
+        assertEquals("32",node.Execute(input));
+        input.put("string", new InterpreterDataType("thiswillendinzero"));
+        input.put("substring", new InterpreterDataType("zeroes"));
+        assertEquals("0",node.Execute(input));
+        fileRestore();
+    }
+
+    @Test
+    public void testIndexErrors() throws Exception{
+        fileMaker(new String[0]);
+        interpreter = new Interpreter(new ProgramNode(), Optional.of(filePath));
+        interpreter.Manager.SplitAndAssign();
+        HashMap<String, InterpreterDataType> input = new HashMap<String, InterpreterDataType>();
+        Exception thrown = assertThrows(Exception.class, () ->{
+            BuiltInFunctionDefinitionNode node = (BuiltInFunctionDefinitionNode) interpreter.Functions.get("index");
+            node.Execute(input);
+        });
+        Assertions.assertEquals("Illegal function call of index! It must only be called like index(string, substring)!", thrown.getMessage());
+        thrown = assertThrows(Exception.class, () ->{
+            input.put("content", new InterpreterDataType("test"));
+            input.put("substring", new InterpreterDataType("test"));
+            input.put("test", new InterpreterDataType("test"));
+            BuiltInFunctionDefinitionNode node = (BuiltInFunctionDefinitionNode) interpreter.Functions.get("index");
+            node.Execute(input);
+        });
+        Assertions.assertEquals("Illegal function call of index! It must only be called like index(string, substring)!", thrown.getMessage());
+        fileRestore();
+    }
+    @Test
+    public void testLength() throws Exception{
+        fileMaker(new String[0]);
+        interpreter = new Interpreter(new ProgramNode(), Optional.of(filePath));
+        interpreter.Manager.SplitAndAssign();
+        BuiltInFunctionDefinitionNode node = (BuiltInFunctionDefinitionNode) interpreter.Functions.get("length");
+        HashMap<String, InterpreterDataType> input = new HashMap<String, InterpreterDataType>();
+        input.put("string", new InterpreterDataType("testString"));
+        assertEquals("10", node.Execute(input));
+        input.clear();
+        input.put("string", new InterpreterDataType(""));
+        assertEquals("0", node.Execute(input));
+        Exception thrown = assertThrows(Exception.class, () ->{
+            input.clear();
+            node.Execute(input);
+        });
+        Assertions.assertEquals("Error! Length must be explicitly called with a param! Ex: length(string)", thrown.getMessage());
+        thrown = assertThrows(Exception.class, () ->{
+            input.put("string", new InterpreterDataType("test"));
+            input.put("test", new InterpreterDataType("test"));
+            node.Execute(input);
+        });
+        Assertions.assertEquals("Error! Length must be explicitly called with a param! Ex: length(string)", thrown.getMessage());
+
+        fileRestore();
+    }
+    @Test
+    public void testSprintf() throws Exception{
+        fileMaker(new String[0]);
+        interpreter = new Interpreter(new ProgramNode(), Optional.of(filePath));
+        interpreter.Manager.SplitAndAssign();
+        BuiltInFunctionDefinitionNode node = (BuiltInFunctionDefinitionNode) interpreter.Functions.get("sprintf");
+        HashMap<String, InterpreterDataType> input = new HashMap<String, InterpreterDataType>();
+        InterpreterArrayDataType content = new InterpreterArrayDataType();
+        input.put("format",new InterpreterDataType("Name: %s, Score: %.2f"));
+        content.put("namehere");
+        content.put(" ");
+        content.put("scorehere");
+        input.put("content",content);
+        assertEquals("Format: Name: %s, Score: %.2f, content: namehere scorehere", node.Execute(input));
+        Exception thrown = assertThrows(Exception.class, () ->{
+            input.clear();
+            node.Execute(input);
+        });
+        Assertions.assertEquals("Error! Method to format string is incorrect! Must be in form sprintf(format, string)!", thrown.getMessage());
+        thrown = assertThrows(Exception.class, () ->{
+            input.put("test", new InterpreterDataType("test"));
+            node.Execute(input);
+        });
+        Assertions.assertEquals("Error! Method to format string is incorrect! Must be in form sprintf(format, string)!", thrown.getMessage());
+        fileRestore();
+    }
+
 }

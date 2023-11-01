@@ -1,7 +1,9 @@
 package icsi311;
 
-import java.io.IOException;
-import java.nio.file.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Optional;
 
 public class Main {
     public static void main(String[] args) {
@@ -12,16 +14,15 @@ public class Main {
             // Reads files with getAllBytes.
             Path myPath = Paths.get("test.awk");
             String content = new String(Files.readAllBytes(myPath));
-            // Lexer object created to create a linkedlist and display the tokens
+            //Lexer object created to create a linkedlist and display the tokens
             Lexer translator = new Lexer(content);
-            // Prints Tokens
-            translator.Lex();
             //Parser initiated and is printed when Parse() is called.
             Parser parser = new Parser(translator.getTokens());
-            System.out.println(parser.Parse());
-
-        } catch (IOException e) {
-            e.printStackTrace();
+            // With parser initiated, interpret the program by retrieving the programnode from
+            // parse, and then interpret the programnode produced from parse and pass in
+            // the input file path.
+            Path inputPath = Paths.get("input.txt");
+            Interpreter interpreter = new Interpreter(parser.Parse(), Optional.of(inputPath));
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }

@@ -12,11 +12,16 @@ public FunctionDefinitionNode(String n, String[] p, LinkedList<StatementNode> s)
     statements = s;
 }
 
+public FunctionDefinitionNode(String n, String[] p){
+    name = n;
+    parameters = p;
+}
+
     public String toString(){
     if(parameters.length > 0)
-        return name + "(" + printParams() + ")" + " Statements: " + statements;
+        return "\nfunc "+name + "(" + printParams() + "){\n" + betterParams(statements.toString()) + "\n}";
     else
-        return name + "()" + " Statements: " + statements;
+        return "\nfunc "+name + "(){\n" + betterParams(statements.toString()) + "\n}";
     }
 
     //Method to print params for the toString() method.
@@ -27,4 +32,12 @@ public String printParams(){
     f = f.substring(0,f.length()-1);
     return f;
 }
+
+public String getName(){
+    return name;
+}
+
+    private String betterParams(String s){
+        return s.substring(1,s.length()-1);
+    }
 }
