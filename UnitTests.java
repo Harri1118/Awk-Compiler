@@ -292,7 +292,7 @@ public class UnitTests {
         assertEquals(ref.toString(), p.ParseOperation().get().toString());
         l = new Lexer("`[abc]`");
         p = new Parser(l.getTokens());
-        assertEquals("PatternNode", p.ParseOperation().get().toString());
+        assertEquals("[abc]", p.ParseOperation().get().toString());
         l = new Lexer("e[++b]");
         p = new Parser(l.getTokens());
         Optional<Node> refPart = Optional.of(new OperationNode(new VariableReferenceNode("b"), OperationNode.PossibleOperations.PREINC));
@@ -606,11 +606,11 @@ public class UnitTests {
     public void ParseMatch() throws Exception{
         Lexer l = new Lexer("a~b");
         Parser p = new Parser(l.getTokens());
-        OperationNode ref = new OperationNode(new VariableReferenceNode("a"), OperationNode.PossibleOperations.TILDE, new VariableReferenceNode("b"));
+        OperationNode ref = new OperationNode(new VariableReferenceNode("a"), OperationNode.PossibleOperations.MATCH, new VariableReferenceNode("b"));
         assertEquals(ref.toString(), p.ParseOperation().get().toString());
         l = new Lexer("a!~b");
         p = new Parser(l.getTokens());
-        ref = new OperationNode(new VariableReferenceNode("a"), OperationNode.PossibleOperations.REGEXP, new VariableReferenceNode("b"));
+        ref = new OperationNode(new VariableReferenceNode("a"), OperationNode.PossibleOperations.NOTMATCH, new VariableReferenceNode("b"));
         assertEquals(ref.toString(), p.ParseOperation().get().toString());
 
     }
@@ -660,13 +660,6 @@ public class UnitTests {
 
         thrown = assertThrows(Exception.class, () -> {
             lexer = new Lexer("2 in 2");
-            Parser p2 = new Parser(lexer.getTokens());
-            p2.ParseOperation();
-        });
-        Assertions.assertEquals("Not an array! Must be a valid array! Must be in the form of EXPRESSION IN ARRAY", thrown.getMessage());
-
-        thrown = assertThrows(Exception.class, () -> {
-            lexer = new Lexer("2 in a");
             Parser p2 = new Parser(lexer.getTokens());
             p2.ParseOperation();
         });
@@ -1601,4 +1594,557 @@ public class UnitTests {
         fileRestore();
     }
 
+    @Test
+    public void testGETIDTAssignmentNodeASSIGN() throws Exception {
+        fileMaker(new String[0]);
+        lexer = new Lexer("a = 2");
+        Parser p = new Parser(lexer.getTokens());
+        Interpreter interpreter = new Interpreter(new ProgramNode(), Optional.of(filePath));
+        interpreter.GetIDT(p.ParseOperation().get(), null);
+        assertEquals( "2", interpreter.GlobalVariables.get("a").toString());
+        HashMap<String, InterpreterDataType> locals = new HashMap<String, InterpreterDataType>();
+        lexer = new Lexer("a = 3");
+        p = new Parser(lexer.getTokens());
+        interpreter.GetIDT(p.ParseOperation().get(), locals);
+        assertEquals( "3", locals.get("a").toString());
+        fileRestore();
+    }
+
+    @Test
+    public void testGETIDTOperationNodeMathOperations() throws Exception{
+        fileMaker(new String[0]);
+        lexer = new Lexer("2 + 2");
+        Parser p = new Parser(lexer.getTokens());
+        Interpreter interpreter = new Interpreter(new ProgramNode(), Optional.of(filePath));
+        assertEquals("4", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        lexer = new Lexer("2 - 2");
+        p = new Parser(lexer.getTokens());
+        assertEquals("0", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        lexer = new Lexer("2 * 2");
+        p = new Parser(lexer.getTokens());
+        assertEquals("4", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        lexer = new Lexer("2 / 2");
+        p = new Parser(lexer.getTokens());
+        assertEquals("1", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        lexer = new Lexer("(2+2)/(2+2)");
+        p = new Parser(lexer.getTokens());
+        assertEquals("1", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        interpreter.GlobalVariables.put("f", new InterpreterDataType("2"));
+        lexer = new Lexer("f % 2");
+        p = new Parser(lexer.getTokens());
+        assertEquals("0", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        fileRestore();
+    }
+    @Test
+    public void testGETIDTAssignmentNodeEQ() throws Exception {
+        fileMaker(new String[0]);
+        lexer = new Lexer("a = 2");
+        Parser p = new Parser(lexer.getTokens());
+        Interpreter interpreter = new Interpreter(new ProgramNode(), Optional.of(filePath));
+        interpreter.GetIDT(p.ParseOperation().get(), null);
+        assertEquals( "2", interpreter.GlobalVariables.get("a").toString());
+        HashMap<String, InterpreterDataType> locals = new HashMap<String, InterpreterDataType>();
+        lexer = new Lexer("a += 3");
+        p = new Parser(lexer.getTokens());
+        interpreter.GetIDT(p.ParseOperation().get(), locals);
+        assertEquals( locals.get("a").toString(), locals.get("a").toString());
+        lexer = new Lexer("a ^= 2");
+        p = new Parser(lexer.getTokens());
+        interpreter.GetIDT(p.ParseOperation().get(), locals);
+        assertEquals(locals.get("a").toString(), locals.get("a").toString());
+        lexer = new Lexer("a -= 2");
+        p = new Parser(lexer.getTokens());
+        interpreter.GetIDT(p.ParseOperation().get(), locals);
+        assertEquals("0",locals.get("a").toString());
+        lexer = new Lexer("a *= 3");
+        p = new Parser(lexer.getTokens());
+        interpreter.GetIDT(p.ParseOperation().get(), null);
+        assertEquals("6", interpreter.GlobalVariables.get("a").toString());
+        interpreter.GlobalVariables.put("f", new InterpreterDataType("2"));
+        lexer = new Lexer("f %= 2");
+        p = new Parser(lexer.getTokens());
+        assertEquals("0", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        assertEquals("0", interpreter.GlobalVariables.get("f").toString());
+        fileRestore();
+    }
+
+    @Test
+    public void testGETIDTPRE() throws Exception{
+        fileMaker(new String[0]);
+        lexer = new Lexer("a = 1");
+        Parser p = new Parser(lexer.getTokens());
+        Interpreter interpreter = new Interpreter(new ProgramNode(), Optional.of(filePath));
+        interpreter.GetIDT(p.ParseOperation().get(), null);
+        lexer = new Lexer("++a");
+        p = new Parser(lexer.getTokens());
+        assertEquals("2", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        assertEquals("2", interpreter.GlobalVariables.get("a").toString());
+        lexer = new Lexer("--a");
+        p = new Parser(lexer.getTokens());
+        assertEquals("1", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        assertEquals("1", interpreter.GlobalVariables.get("a").toString());
+        interpreter.GlobalVariables.put("b", new InterpreterDataType());
+        lexer = new Lexer("++b");
+        p = new Parser(lexer.getTokens());
+        assertEquals("1", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        lexer = new Lexer("--c");
+        p = new Parser(lexer.getTokens());
+        assertEquals("-1", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        interpreter.GlobalVariables.put("str", new InterpreterDataType("string"));
+        lexer = new Lexer("--str");
+        p = new Parser(lexer.getTokens());
+        assertEquals("-1", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        assertEquals("-1", interpreter.GlobalVariables.get("str").toString());
+        lexer = new Lexer("++str");
+        p = new Parser(lexer.getTokens());
+        assertEquals("0", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        assertEquals("0", interpreter.GlobalVariables.get("str").toString());
+        fileRestore();
+    }
+
+    @Test
+    public void testGETIDTPREERROR() throws Exception{
+        fileMaker(new String[0]);
+        Interpreter interpreter = new Interpreter(new ProgramNode(), Optional.of(filePath));
+        Exception thrown = assertThrows(Exception.class, () ->{
+            lexer = new Lexer("++3");
+            Parser p2 = new Parser(lexer.getTokens());
+            interpreter.GetIDT(p2.ParseOperation().get(), null);
+        });
+        Assertions.assertEquals("Error! Cannot pre-increment to any other value except a VariableReferenceNode! Ex: ++var, --var", thrown.getMessage());
+        fileRestore();
+    }
+    @Test
+    public void testGETIDTPOST() throws Exception{
+        fileMaker(new String[0]);
+        lexer = new Lexer("a = 1");
+        Parser p = new Parser(lexer.getTokens());
+        Interpreter interpreter = new Interpreter(new ProgramNode(), Optional.of(filePath));
+        interpreter.GetIDT(p.ParseOperation().get(), null);
+        lexer = new Lexer("a++");
+        p = new Parser(lexer.getTokens());
+        assertEquals("1", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        assertEquals("2", interpreter.GlobalVariables.get("a").toString());
+        lexer = new Lexer("a--");
+        p = new Parser(lexer.getTokens());
+        assertEquals("2", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        assertEquals("1", interpreter.GlobalVariables.get("a").toString());
+        lexer = new Lexer("b++");
+        p = new Parser(lexer.getTokens());
+        assertEquals("0", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        assertEquals("1", interpreter.GlobalVariables.get("b").toString());
+        lexer = new Lexer("c--");
+        p = new Parser(lexer.getTokens());
+        assertEquals("0", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        assertEquals("-1", interpreter.GlobalVariables.get("c").toString());
+        interpreter.GlobalVariables.put("str", new InterpreterDataType("string"));
+        lexer = new Lexer("str--");
+        p = new Parser(lexer.getTokens());
+        assertEquals("0", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        assertEquals("-1", interpreter.GlobalVariables.get("str").toString());
+        lexer = new Lexer("str++");
+        p = new Parser(lexer.getTokens());
+        assertEquals("-1", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        assertEquals("0", interpreter.GlobalVariables.get("str").toString());
+        fileRestore();
+    }
+
+    @Test
+    public void testGETIDTEqualsComparisonsNUMS() throws Exception{
+        fileMaker(new String[0]);
+        Interpreter interpreter = new Interpreter(new ProgramNode(), Optional.of(filePath));
+        interpreter.GlobalVariables.put("a", new InterpreterDataType("1"));
+        interpreter.GlobalVariables.put("b", new InterpreterDataType("2"));
+        lexer = new Lexer("a == b");
+        Parser p = new Parser(lexer.getTokens());
+        assertEquals("0", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        lexer = new Lexer("a != b");
+        p = new Parser(lexer.getTokens());
+        assertEquals("1", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        interpreter.GlobalVariables.put("a", new InterpreterDataType("2"));
+        lexer = new Lexer("a != b");
+        p = new Parser(lexer.getTokens());
+        assertEquals("0", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        fileRestore();
+    }
+
+    @Test
+    public void testGETIDTEqualsComparisonsWORDS() throws Exception{
+        fileMaker(new String[0]);
+        Interpreter interpreter = new Interpreter(new ProgramNode(), Optional.of(filePath));
+        interpreter.GlobalVariables.put("a", new InterpreterDataType("test"));
+        interpreter.GlobalVariables.put("b", new InterpreterDataType("test1"));
+        lexer = new Lexer("a == b");
+        Parser p = new Parser(lexer.getTokens());
+        assertEquals("0", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        lexer = new Lexer("a != b");
+        p = new Parser(lexer.getTokens());
+        assertEquals("1", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        interpreter.GlobalVariables.put("b", new InterpreterDataType("test"));
+        lexer = new Lexer("a != b");
+        p = new Parser(lexer.getTokens());
+        assertEquals("0", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        lexer = new Lexer("a == b");
+        p = new Parser(lexer.getTokens());
+        assertEquals("1", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        fileRestore();
+    }
+    @Test
+    public void testGETIDTGTLEComparisonsNUMS() throws Exception{
+        fileMaker(new String[0]);
+        Interpreter interpreter = new Interpreter(new ProgramNode(), Optional.of(filePath));
+        interpreter.GlobalVariables.put("a", new InterpreterDataType("1"));
+        interpreter.GlobalVariables.put("b", new InterpreterDataType("2"));
+        lexer = new Lexer("a < b");
+        Parser p = new Parser(lexer.getTokens());
+        assertEquals("1", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        lexer = new Lexer("a > b");
+        p = new Parser(lexer.getTokens());
+        assertEquals("0", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        lexer = new Lexer("a <= b");
+        p = new Parser(lexer.getTokens());
+        assertEquals("1", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        lexer = new Lexer("a >= b");
+        p = new Parser(lexer.getTokens());
+        assertEquals("0", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        lexer = new Lexer("a >= b");
+        p = new Parser(lexer.getTokens());
+        interpreter.GlobalVariables.put("a", new InterpreterDataType("2"));
+        assertEquals("1", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        lexer = new Lexer("a <= b");
+        p = new Parser(lexer.getTokens());
+        assertEquals("1", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        fileRestore();
+    }
+
+    @Test
+    public void testGETIDTGTLEComparisonsWORDS() throws Exception{
+        fileMaker(new String[0]);
+        Interpreter interpreter = new Interpreter(new ProgramNode(), Optional.of(filePath));
+        interpreter.GlobalVariables.put("a", new InterpreterDataType("hello"));
+        interpreter.GlobalVariables.put("b", new InterpreterDataType("goodbye"));
+        lexer = new Lexer("a < b");
+        Parser p = new Parser(lexer.getTokens());
+        assertEquals("0", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        lexer = new Lexer("a > b");
+        p = new Parser(lexer.getTokens());
+        assertEquals("1", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        lexer = new Lexer("a <= b");
+        p = new Parser(lexer.getTokens());
+        assertEquals("0", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        lexer = new Lexer("a >= b");
+        p = new Parser(lexer.getTokens());
+        assertEquals("1", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        lexer = new Lexer("a >= b");
+        p = new Parser(lexer.getTokens());
+        interpreter.GlobalVariables.put("a", new InterpreterDataType("2"));
+        assertEquals("0", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        lexer = new Lexer("a <= b");
+        p = new Parser(lexer.getTokens());
+        assertEquals("1", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        fileRestore();
+    }
+
+    @Test
+    public void GetIDTBoolOperatorBASIC() throws Exception{
+        fileMaker(new String[0]);
+        Interpreter interpreter = new Interpreter(new ProgramNode(), Optional.of(filePath));
+        interpreter.GlobalVariables.put("a", new InterpreterDataType("hello"));
+        interpreter.GlobalVariables.put("b", new InterpreterDataType("goodbye"));
+        lexer = new Lexer("1 && 1");
+        Parser p = new Parser(lexer.getTokens());
+        assertEquals("1", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        lexer = new Lexer("1 && 0");
+        p = new Parser(lexer.getTokens());
+        assertEquals("0", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        lexer = new Lexer("a && b");
+        p = new Parser(lexer.getTokens());
+        //interpreter.GetIDT(p.ParseOperation().get(), null);
+        assertEquals("1", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        lexer = new Lexer("a && 0");
+        p = new Parser(lexer.getTokens());
+        assertEquals("0", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        lexer = new Lexer("a || b");
+        p = new Parser(lexer.getTokens());
+        assertEquals("1", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        lexer = new Lexer("a || 0");
+        p = new Parser(lexer.getTokens());
+        assertEquals("1", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        lexer = new Lexer("b || b");
+        p = new Parser(lexer.getTokens());
+        assertEquals("1", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        lexer = new Lexer("c || f");
+        p = new Parser(lexer.getTokens());
+        assertEquals("0", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        fileRestore();
+    }
+
+    @Test
+    public void testGetIDTNOT() throws Exception{
+        fileMaker(new String[0]);
+        Interpreter interpreter = new Interpreter(new ProgramNode(), Optional.of(filePath));
+        interpreter.GlobalVariables.put("a", new InterpreterDataType("hello"));
+        interpreter.GlobalVariables.put("b", new InterpreterDataType("goodbye"));
+        lexer = new Lexer("!(0)");
+        Parser p = new Parser(lexer.getTokens());
+        assertEquals("1", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        lexer = new Lexer("!(1)");
+        p = new Parser(lexer.getTokens());
+        assertEquals("0", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        lexer = new Lexer("!(a && b)");
+        p = new Parser(lexer.getTokens());
+        assertEquals("0", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        lexer = new Lexer("!(2 == 3)");
+        p = new Parser(lexer.getTokens());
+        assertEquals("1", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        lexer = new Lexer("!(a == b)");
+        p = new Parser(lexer.getTokens());
+        assertEquals("1", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        interpreter.GlobalVariables.put("b", new InterpreterDataType("hello"));
+        lexer = new Lexer("!(a == b)");
+        p = new Parser(lexer.getTokens());
+        assertEquals("0", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        fileRestore();
+    }
+    @Test
+    public void GetIDTBoolOperatorADVANCED() throws Exception{
+        fileMaker(new String[0]);
+        Interpreter interpreter = new Interpreter(new ProgramNode(), Optional.of(filePath));
+        interpreter.GlobalVariables.put("a", new InterpreterDataType("2"));
+        interpreter.GlobalVariables.put("b", new InterpreterDataType("2"));
+        interpreter.GlobalVariables.put("c", new InterpreterDataType("3"));
+        interpreter.GlobalVariables.put("d", new InterpreterDataType("5"));
+        lexer = new Lexer("(a == b) && (c < d) && !(c < 2)");
+        Parser p = new Parser(lexer.getTokens());
+        assertEquals("1", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        lexer = new Lexer("(a == 5) || (b > \"test\") && d < 5");
+        p = new Parser(lexer.getTokens());
+        assertEquals("0", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        lexer = new Lexer("!(a == 4) || !(b == 2) || a < 5");
+        p = new Parser(lexer.getTokens());
+        assertEquals("1", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        lexer = new Lexer("(!(a) && !(b) || a == \"hello\" || b == \"hello\" && a++ == 5)");
+        p = new Parser(lexer.getTokens());
+        assertEquals("1", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        fileRestore();
+    }
+
+    @Test
+    public void testConcatination() throws Exception{
+        fileMaker(new String[0]);
+        Interpreter interpreter = new Interpreter(new ProgramNode(), Optional.of(filePath));
+        lexer = new Lexer("\"test\" \"test\"");
+        Parser p = new Parser(lexer.getTokens());
+        assertEquals("testtest", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        lexer = new Lexer("2 \"test\"");
+        p = new Parser(lexer.getTokens());
+        assertEquals("2test", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        interpreter.GlobalVariables.put("a",new InterpreterDataType("2"));
+        lexer = new Lexer("2 a");
+        p = new Parser(lexer.getTokens());
+        assertEquals("22", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        fileRestore();
+    }
+
+    @Test
+    public void testIn() throws Exception{
+        fileMaker(new String[0]);
+        Interpreter interpreter = new Interpreter(new ProgramNode(), Optional.of(filePath));
+        lexer = new Lexer("a[1] = \"test\"");
+        Parser p = new Parser(lexer.getTokens());
+        interpreter.GetIDT(p.ParseOperation().get(), null);
+        lexer = new Lexer("a[\"two\"] = \"test2\"");
+        p = new Parser(lexer.getTokens());
+        interpreter.GetIDT(p.ParseOperation().get(), null);
+        lexer = new Lexer("1 in a");
+        p = new Parser(lexer.getTokens());
+        assertEquals("1", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        lexer = new Lexer("\"two\" in a");
+        p = new Parser(lexer.getTokens());
+        assertEquals("1", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        lexer = new Lexer("\"two\" in b");
+        p = new Parser(lexer.getTokens());
+        assertEquals("0", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        lexer = new Lexer("a[1] in a");
+        p = new Parser(lexer.getTokens());
+        assertEquals("1", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        lexer = new Lexer("a[two] in a");
+        p = new Parser(lexer.getTokens());
+        assertEquals("1", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        lexer = new Lexer("a[2] in a");
+        p = new Parser(lexer.getTokens());
+        assertEquals("0", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        lexer = new Lexer("a[three] in a");
+        p = new Parser(lexer.getTokens());
+        assertEquals("0", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        fileRestore();
+    }
+
+    @Test
+    public void InterpreterGetIDTVariableNode() throws Exception{
+        fileMaker(new String[0]);
+        Interpreter interpreter = new Interpreter(new ProgramNode(), Optional.of(filePath));
+        lexer = new Lexer("a[1] = \"test\"");
+        Parser p = new Parser(lexer.getTokens());
+        assertEquals("test",interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        lexer = new Lexer("b = 2");
+        p = new Parser(lexer.getTokens());
+        assertEquals("2",interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        lexer = new Lexer("c");
+        p = new Parser(lexer.getTokens());
+        assertEquals("0", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        lexer = new Lexer("a[1]");
+        p = new Parser(lexer.getTokens());
+        assertEquals("test", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        fileRestore();
+    }
+
+    @Test
+    public void InterpreterGetIDTTernaryNode() throws Exception{
+        fileMaker(new String[0]);
+        Interpreter interpreter = new Interpreter(new ProgramNode(), Optional.of(filePath));
+        interpreter.GlobalVariables.put("b", new InterpreterDataType("IAmB"));
+        interpreter.GlobalVariables.put("c", new InterpreterDataType("IAmC"));
+        lexer = new Lexer("a = (2 > 1) ? b : c");
+        Parser p = new Parser(lexer.getTokens());
+        assertEquals("IAmB",interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        lexer = new Lexer("a = (1 == 2) ? b : c");
+        p = new Parser(lexer.getTokens());
+        assertEquals("IAmC",interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        lexer = new Lexer("a = (1 > 2) ? \"b\" : (2 < 1) ? \"c\" : (5 > 1)? \"hello\" : \"goodbye\"");
+        p = new Parser(lexer.getTokens());
+        assertEquals("hello", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        fileRestore();
+    }
+
+    @Test
+    public void InterpreterGetIDTFunctionCallNode() throws Exception{
+        fileMaker(new String[0]);
+        Interpreter interpreter = new Interpreter(new ProgramNode(), Optional.of(filePath));
+        Exception thrown = assertThrows(Exception.class, () ->{
+            lexer = new Lexer("myFunction()");
+            Parser p2 = new Parser(lexer.getTokens());
+            interpreter.GetIDT(p2.ParseOperation().get(), null);
+        });
+        Assertions.assertEquals("Error! Function doesn't exist!", thrown.getMessage());
+        FunctionCallNode func = new FunctionCallNode("myFunction");
+        interpreter.Functions.put(func.getName(), new FunctionDefinitionNode("myFunction", new String[0]));
+        lexer = new Lexer("myFunction()");
+        Parser p = new Parser(lexer.getTokens());
+        assertEquals("Function call ran.",interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        fileRestore();
+    }
+
+    @Test
+    public void InterpreterGetIDTAddFields() throws Exception{
+        fileMaker(new String[]{"Line1Word1 Line1Word2 Line1Word3"});
+        Interpreter interpreter = new Interpreter(new ProgramNode(), Optional.of(filePath));
+        lexer = new Lexer("$(1+2)");
+        Parser p = new Parser(lexer.getTokens());
+        interpreter.Manager.SplitAndAssign();
+        assertEquals("Line1Word3",interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        lexer = new Lexer("$(1+\"test\")");
+        p = new Parser(lexer.getTokens());
+        assertEquals("Line1Word1",interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        lexer = new Lexer("$1 + test");
+        p = new Parser(lexer.getTokens());
+        assertEquals("0",interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        lexer = new Lexer("$(1 + test)");
+        p = new Parser(lexer.getTokens());
+        assertEquals("Line1Word1",interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        fileRestore();
+    }
+
+    @Test
+    public void InterpretGetIDTMatch() throws Exception{
+        fileMaker(new String[]{"Line1Word1 Line1Word2 Line1Word3"});
+        Interpreter interpreter = new Interpreter(new ProgramNode(), Optional.of(filePath));
+        interpreter.Manager.SplitAndAssign();
+        lexer = new Lexer("$0 ~ `Word`");
+        Parser p = new Parser(lexer.getTokens());
+        assertEquals("1",interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        lexer = new Lexer("$1 ~ `xv3ed`");
+        p = new Parser(lexer.getTokens());
+        assertEquals("0",interpreter.GetIDT(p.ParseOperation().get(), null).toString() );
+        lexer = new Lexer("$2 !~ `rfgrgg`");
+        p = new Parser(lexer.getTokens());
+        assertEquals("1", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        lexer = new Lexer("$3 !~ `3`");
+        p = new Parser(lexer.getTokens());
+        assertEquals("0", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        fileRestore();
+    }
+
+    @Test
+    public void InterpretGetIDTMatchERRORS() throws Exception{
+        fileMaker(new String[]{"Line1Word1 Line1Word2 Line1Word3"});
+        Interpreter interpreter = new Interpreter(new ProgramNode(), Optional.of(filePath));
+        interpreter.Manager.SplitAndAssign();
+        Exception thrown = assertThrows(Exception.class, () ->{
+            lexer = new Lexer("$0 ~ \"word\"");
+            Parser p2 = new Parser(lexer.getTokens());
+            interpreter.GetIDT(p2.ParseOperation().get(), null);
+        });
+        Assertions.assertEquals("Error! Cannot match with a non-pattern type! Ex: expr ~|!~ PATTERN", thrown.getMessage());
+        thrown = assertThrows(Exception.class, () ->{
+            lexer = new Lexer("$0 !~ \"word\"");
+            Parser p2 = new Parser(lexer.getTokens());
+            interpreter.GetIDT(p2.ParseOperation().get(), null);
+        });
+        Assertions.assertEquals("Error! Cannot match with a non-pattern type! Ex: expr ~|!~ PATTERN", thrown.getMessage());
+
+        fileRestore();
+    }
+
+    @Test
+    public void InterpretGetIDTUnary() throws Exception{
+        fileMaker(new String[0]);
+        Interpreter interpreter = new Interpreter(new ProgramNode(), Optional.of(filePath));
+        lexer = new Lexer("a = +\"2\"");
+        Parser p = new Parser(lexer.getTokens());
+        assertEquals("2",interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        lexer = new Lexer("b = -a");
+        p = new Parser(lexer.getTokens());
+        assertEquals("-2",interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        lexer = new Lexer("-\"3\"");
+        p = new Parser(lexer.getTokens());
+        assertEquals("-3", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        lexer = new Lexer("+\"test\"");
+        p = new Parser(lexer.getTokens());
+        assertEquals("0", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        lexer = new Lexer("-\"test\"");
+        p = new Parser(lexer.getTokens());
+        assertEquals("0", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        fileRestore();
+    }
+
+    @Test
+    public void InterpretGetIDTVariableReferenceNode() throws Exception{
+        fileMaker(new String[0]);
+        Interpreter interpreter = new Interpreter(new ProgramNode(), Optional.of(filePath));
+        lexer = new Lexer("a[\"test1\"] = 1");
+        Parser p = new Parser(lexer.getTokens());
+        assertEquals("1",interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        assertEquals("1", interpreter.GlobalVariables.get("a[\"test1\"]").toString());
+        lexer = new Lexer("a[\"test1\"]");
+        p = new Parser(lexer.getTokens());
+        assertEquals("1", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        lexer = new Lexer("a[\"test2\"]");
+        p = new Parser(lexer.getTokens());
+        assertEquals("0", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        fileRestore();
+    }
+
+    @Test
+    public void InterpretGetIDTPATTERNERROR() throws Exception{
+        fileMaker(new String[0]);
+        Interpreter interpreter = new Interpreter(new ProgramNode(), Optional.of(filePath));
+        Exception thrown = assertThrows(Exception.class, () ->{
+            lexer = new Lexer("`test`");
+            Parser p2 = new Parser(lexer.getTokens());
+            interpreter.GetIDT(p2.ParseOperation().get(), null);
+        });
+        Assertions.assertEquals("Error! Cannot call a patternNode outside of a statement!", thrown.getMessage());
+        fileRestore();
+    }
 }

@@ -1,29 +1,40 @@
 package icsi311;
 
 public class AssignmentNode extends StatementNode{
-    VariableReferenceNode Target;
+    Node Target;
     OperationNode Expression;
-
-    public AssignmentNode(VariableReferenceNode t, OperationNode e){
-        Target = t;
-        Expression = e;
-        // If Assignment, Target is a new VariableReferenceNode assigned to value from e
-        if(e.getOperation() == OperationNode.PossibleOperations.ASSIGN){
-        String s = t.getName();
-        Target = new VariableReferenceNode(s, e.getRightValue());
-        }
-    }
 
     public AssignmentNode(Node t, OperationNode e){
         // If t is VariableReferenceNode, then set it to target
-        if(t instanceof VariableReferenceNode)
-            Target = (VariableReferenceNode) t;
+        Target = t;
         Expression = e;
     }
 
     public String toString(){
-        if(Expression.getOperation() == OperationNode.PossibleOperations.ASSIGN)
-            return Target.getName() + " = " + Expression.getRightValue().get();
+        if(Target instanceof VariableReferenceNode) {
+            VariableReferenceNode t = (VariableReferenceNode) Target;
+            if (Expression.getOperation() == OperationNode.PossibleOperations.ASSIGN)
+                return t.getName() + " = " + Expression.getRightValue().get();
+        }
+        else if(Target instanceof OperationNode){
+            OperationNode opNode = (OperationNode) Target;
+            String fin = opNode.getLeftValue().toString();
+            if(fin.contains(".")){
+                String[] change = fin.split(".");
+                fin = change[0];
+            }
+            return "$" + opNode.getLeftValue().toString();
+        }
         return Expression.toString();
+    }
+
+    public Node getTarget(){
+        return Target;
+    }
+
+    public boolean isPost(){
+        if(Expression.getOperation() == OperationNode.PossibleOperations.POSTDEC || Expression.getOperation() == OperationNode.PossibleOperations.POSTINC)
+            return true;
+        return false;
     }
 }

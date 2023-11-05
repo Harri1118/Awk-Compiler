@@ -20,9 +20,9 @@ public class VariableReferenceNode extends Node{
         Index2 = o2;
     }
     public String toString(){
-        if(!Index.isEmpty() && Index2.isEmpty())
-            return name + " V=(" + Index.get().toString() + "))";
-        else if(!Index2.isEmpty())
+        if (!Index.isEmpty() && Index2.isEmpty())
+            return name + "[\"" + Index.get().toString() + "\"]";
+        else if (!Index2.isEmpty())
             return "Variable(NAME=" + name + ", VALUE=(" + Index.get().toString() + ", " + Index2.get().toString() + "))";
         else
             return name;
@@ -32,9 +32,30 @@ public class VariableReferenceNode extends Node{
         return name;
     }
 
+    public boolean isNum(String s){
+        try{
+            float f = Float.parseFloat(s);
+            return true;
+        }
+        catch(Exception e){
+        return false;}
+    }
     public boolean hasValue(){
         if(!Index.isEmpty() || !Index2.isEmpty())
             return true;
         return false;
+    }
+
+    public boolean isArray(){
+        if(!Index.isEmpty())
+            return true;
+        return false;
+    }
+
+    public String fixNum(String s){
+        return s.substring(0,s.length()-2);
+    }
+    public String getIndex(){
+        return Index.get().toString();
     }
 }

@@ -19,4 +19,16 @@ public class TernaryNode extends Node{
         return "TernaryNode(CONDITION: " + Condition.toString() + ", CONSEQUENT: " + Consequent + ", ALTERNATE: " + Alternate + ")";
     }
 
+    public Node getCondition(){
+        return Condition;
+    }
+
+    public Node getConsequent(){
+        return Consequent;
+    }
+
+    public Node getAlternate(){
+        return Alternate;
+    }
+
 }

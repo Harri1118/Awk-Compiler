@@ -62,6 +62,8 @@ public class Lexer {
                 // the case.
                 else if (c == '"')
                     handleStringLiteral();
+                else if(c == '`')
+                    HandlePattern();
                 // Checks if character is an operand, goes into processSymbol() state if so.
                 else if (charHashes.containsKey(c))
                     processSymbol();
@@ -241,6 +243,20 @@ public class Lexer {
         return s.substring(0, s.length() - 2) + "\"";
     }
 
+    private void HandlePattern(){
+        char s = document.Peek(0);
+        TokenType t = charHashes.get(s);
+        tokens.add(new Token(charHashes.get(s), String.valueOf(s), position, line));
+        document.Swallow(1);
+        String buffer = "";
+        while(document.Peek(0) != '`')
+            buffer += document.GetChar();
+        position += buffer.length()+2;
+        tokens.add(new Token(TokenType.STRINGLITERAL, buffer, position, line));
+        s = document.Peek(0);
+        document.Swallow(1);
+        tokens.add(new Token(charHashes.get(s), String.valueOf(s), position, line));
+    }
     // setStatements() used for setting statements to tokens.
     private void setStatements() {
         Ophashes.put("while", TokenType.WHILE);

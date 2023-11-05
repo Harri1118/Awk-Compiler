@@ -1,5 +1,4 @@
 package icsi311;
-
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -22,7 +21,14 @@ public class Main {
             // parse, and then interpret the programnode produced from parse and pass in
             // the input file path.
             Path inputPath = Paths.get("input.txt");
-            Interpreter interpreter = new Interpreter(parser.Parse(), Optional.of(inputPath));
+            Interpreter interpreter = new Interpreter(new ProgramNode(), Optional.of(inputPath));
+            Node n = parser.ParseOperation().get();
+            interpreter.GetIDT(n, interpreter.GlobalVariables);
+            System.out.println(interpreter.GlobalVariables.toString());
+            parser.AcceptSeparators();
+            n = parser.ParseOperation().get();
+            interpreter.GetIDT(n, interpreter.GlobalVariables);
+            System.out.println(interpreter.GlobalVariables.toString());
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }

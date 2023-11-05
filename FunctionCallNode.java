@@ -28,4 +28,8 @@ public class FunctionCallNode extends StatementNode{
     public String betterParams(String s){
         return s.substring(1,s.length()-1);
     }
+
+    public String getName(){
+        return Name;
+    }
 }
