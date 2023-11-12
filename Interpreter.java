@@ -381,7 +381,10 @@ public class Interpreter {
             // Create an arr for array cases
             InterpreterArrayDataType arr;
             // Put new variable into Variables
-            Variables.put(name, val);
+            if(!aNode.Expression.isPostIncremental())
+                Variables.put(name, val);
+            else
+                return val;
             // If Target is part of an array and the array is already initialized, add it to the existing array and put it as a Variable into Variables
             if(Target.isArray() && Variables.containsKey(Target.getName())){
                 arr = (InterpreterArrayDataType) Variables.get(Target.getName());
@@ -464,7 +467,7 @@ public class Interpreter {
             VariableReferenceNode var = (VariableReferenceNode) VNode;
             // Check if Variable is contained in Variables. If not then return 0
             if(!Variables.containsKey(var.toString()) || Variables.get(var.toString()).isEmpty())
-                return new InterpreterDataType("0");
+                return new InterpreterDataType("");
             // If variable is not an array return its val
             else if(!var.isArray())
                 return Variables.get(var.toString());
@@ -483,7 +486,7 @@ public class Interpreter {
             InterpreterDataType i = new InterpreterDataType(GetIDT(operationNode.getRightValue().get(), null).toString());
             return i;}
         // Get left value from the operationNode's left node.
-        InterpreterDataType Left = GetIDT(operationNode.getLeftValue(), null);
+        InterpreterDataType Left = GetIDT(operationNode.getLeftValue(), Variables);
         // Check if operation is PREINC or PREDEC, then return PreIncrement with appropriate Variables
         if (operationNode.isPreIncremental())
             return PreIncrement(operationNode, Left, Variables);
@@ -779,7 +782,260 @@ public class Interpreter {
         return Variables.get("$"+left.toString());
     }
 
+    // isLoop checks the instance type of StatementNode s. If it is not any of the below
+    // objects, return false
+    public boolean isLoop(StatementNode s){
+        if(s instanceof ForNode)
+            return true;
+        else if(s instanceof ForEachNode)
+            return true;
+        else if(s instanceof DoWhileNode)
+            return true;
+        else if(s instanceof IfNode)
+            return true;
+        else if(s instanceof WhileNode)
+            return true;
+        else
+            return false;
+    }
 
+    public ReturnType InterpretedListOfStatements(HashMap<String,InterpreterDataType> locals, LinkedList<StatementNode> Statements) throws Exception{
+        // fin is the object which will be ultimately returned
+        ReturnType fin = new ReturnType(ReturnType.TypeOfReturn.NORMAL);
+        // If the locals are null, then make them global
+        if(Objects.isNull(locals))
+            locals = GlobalVariables;
+        // Iterate inside the input Statements to process each Statement
+        for(var s: Statements){
+            // If s is a loop, do not return back whatever ReturnType is returned.
+            if(isLoop(s) == true) {
+                ProcessStatement(locals, s);
+            }
+            // Process the Statement otherwise, and return a different returnType if not normal
+            else {
+                fin = ProcessStatement(locals, s);
+                if (fin.getReturnType() != ReturnType.TypeOfReturn.NORMAL)
+                    break;
+            }
+        }
+        return fin;
+    }
+
+    // ProcessStatement takes in locals and a singular statement to process
+    public ReturnType ProcessStatement(HashMap<String, InterpreterDataType> locals, StatementNode stmt) throws Exception{
+        ReturnType fin = ProcessBreakNode(locals, stmt);
+        // Check if BreakNode returns null
+        if(Objects.isNull(fin)){
+            // GetIDT and process whatever the statement is. Then return normal
+            GetIDT(stmt, locals);
+            return new ReturnType(ReturnType.TypeOfReturn.NORMAL);
+        }
+        else
+            return fin;
+    }
+
+    // ProcessBreakNode handles Break nodes
+    public ReturnType ProcessBreakNode(HashMap<String, InterpreterDataType> locals, StatementNode stmt) throws Exception {
+        // Create new break ReturnType if stmt is an instance of breakNode
+        if(stmt instanceof BreakNode)
+            return new ReturnType(ReturnType.TypeOfReturn.BREAK);
+        // Return ContinueNode otherwise
+        return ProcessContinueNode(locals, stmt);
+    }
+
+    // ProcessContinueNode handles continue nodes
+    public ReturnType ProcessContinueNode(HashMap<String, InterpreterDataType> locals, StatementNode stmt) throws Exception {
+        // Checks of stmt is an instance of a ContinueNode. Return a new ReturnType Continue if so
+        if(stmt instanceof ContinueNode)
+            return new ReturnType(ReturnType.TypeOfReturn.CONTINUE);
+        // If not, return ProcessDeleteNode
+        return ProcessDeleteNode(locals, stmt);
+    }
+
+    // ProcessDeleteNode handles delete nodes
+    public ReturnType ProcessDeleteNode(HashMap<String, InterpreterDataType> locals, StatementNode stmt) throws Exception {
+        // Check if stmt is an instance of deletenode
+        if(stmt instanceof DeleteNode){
+            // get VariableReferenceNode from stmt
+            DeleteNode inp = (DeleteNode) stmt;
+            VariableReferenceNode var = (VariableReferenceNode) inp.getTarget();
+            // Check of if the var's name attribute is an InterpreterArrayDataType.
+            // If not, then throw an exception
+            if(!(locals.get(var.getName()) instanceof InterpreterArrayDataType))
+                throw new Exception("Cannot delete a non-array!");
+            // if the toString is an interpreterArrayDataType in the locals, then call removeAll
+            else if(locals.get(var.toString()) instanceof InterpreterArrayDataType)
+                removeAll(locals, var.toString());
+            // else, get the array, and delete the variable from locals and its reference in its IDAT
+            else{
+                InterpreterArrayDataType arr = (InterpreterArrayDataType) locals.get(var.getName());
+                arr.getContent().remove(var.getIndex());
+                locals.remove(var.toString());
+            }
+            return new ReturnType(ReturnType.TypeOfReturn.NORMAL);
+        }
+
+        return ProcessDoWhileNode(locals, stmt);
+    }
+
+    // removeAll eliminates all the elements from s
+    public void removeAll(HashMap<String, InterpreterDataType> locals, String s){
+        // pulls arr from locals
+        InterpreterArrayDataType arr = (InterpreterArrayDataType) locals.get(s);
+        // parses through each key in locals and deletes the accompanying var
+        for(String key: arr.getContent().keySet())
+            locals.remove(s + "[\"" + key + "\"]");
+        // finally, remove IDAT
+        locals.remove(s);
+    }
+
+    // doWhile deals with doWhile nodes
+    public ReturnType ProcessDoWhileNode(HashMap<String, InterpreterDataType> locals, StatementNode stmt) throws Exception {
+        if(stmt instanceof DoWhileNode){
+            DoWhileNode doWhile = (DoWhileNode) stmt;
+            // emulate the do-while loop. The condition depends of the doWhile objects' .getCondition()
+            // returned from GetIDT
+            do {
+                // Get returnType fin from InterpretedListOfStatements()
+                ReturnType fin = InterpretedListOfStatements(locals, doWhile.getStatements());
+                // If fin doesn't return normal, return it
+                if(fin.getReturnType() != ReturnType.TypeOfReturn.NORMAL)
+                    return fin;
+            }
+            while(GetIDT(doWhile.getCondition(), locals).toString().equals("1"));
+            // Return normal otherwise
+            return new ReturnType(ReturnType.TypeOfReturn.NORMAL);
+        }
+        return ProcessForNode(locals, stmt);
+    }
+
+    public ReturnType ProcessForNode(HashMap<String, InterpreterDataType> locals, StatementNode stmt) throws Exception{
+        if(stmt instanceof ForNode){
+            // Create a ForNode if stmt is an instance of it
+            ForNode forNode = (ForNode) stmt;
+            // Retrieve its LinkedList<Node> Condition
+            LinkedList<Node> condition = forNode.getCondition();
+            // Process its first condition
+            ProcessStatement(locals, (StatementNode) condition.get(0));
+            // Make sure the GetIDT is equal to 1 from condition.get(1), and then
+            // initiate a while loop which goes through the inner statements
+            while(GetIDT(condition.get(1), locals).toString().equals("1")){
+                // Get fin
+                ReturnType fin = InterpretedListOfStatements(locals, forNode.getBlock().getStatements());
+                // If fin isn't normal, return it
+                if(fin.getReturnType() != ReturnType.TypeOfReturn.NORMAL)
+                    return fin;
+                // ProcessStatement for the third condition in the LinkedList<Node> condition
+                ProcessStatement(locals, (StatementNode) condition.get(2));
+            }
+            // Return normal
+            return new ReturnType(ReturnType.TypeOfReturn.NORMAL);
+             }
+        return ProcessForEachNode(locals, stmt);
+    }
+
+    public ReturnType ProcessForEachNode(HashMap<String, InterpreterDataType> locals, StatementNode stmt) throws Exception{
+        if(stmt instanceof ForEachNode){
+            ForEachNode forEachNode = (ForEachNode) stmt;
+            // Get OpoerationNode Condition from the ForEachNode
+            OperationNode condition = (OperationNode) forEachNode.getCondition();
+            // Create a variable from the left value of condition
+            VariableReferenceNode leftValue  = (VariableReferenceNode) condition.getLeftValue();
+            // Put the leftValue in the locals
+            locals.put(leftValue.getName(), new InterpreterDataType(""));
+            // Find the variable from the right value of the condition (first in the locals, and if not then find it in global)
+            VariableReferenceNode rightValue = (VariableReferenceNode) condition.getRightValue().get();
+            // Create the array. Find it in the locals
+            InterpreterArrayDataType arr;
+            if(!locals.containsKey(rightValue.getName())){
+                // If it doesn't contain the key, return normal
+                if (!GlobalVariables.containsKey(rightValue.getName()))
+                    return new ReturnType(ReturnType.TypeOfReturn.NORMAL);
+                // If found in glovals, set it
+                arr = (InterpreterArrayDataType) GlobalVariables.get(rightValue.getName());
+            }
+            // If found in locals, set it
+            else
+                arr = (InterpreterArrayDataType) locals.get(rightValue.getName());
+            // Emulate java's forEach
+            for(String f : arr.getContent().keySet()){
+            // Get value of f from array and set it to f
+            locals.put(leftValue.getName(), locals.get(rightValue.getName()+"[\"" + f + "\"]"));
+            // Get returnType from InterpretedListOfStatements
+            ReturnType fin = InterpretedListOfStatements(locals, forEachNode.getBlock().getStatements());
+            // If not normal, return it
+            if(fin.getReturnType() != ReturnType.TypeOfReturn.NORMAL)
+                return fin;
+            // Otherwise, if it is still contained as a local, set the value of f to it
+            if(locals.containsKey(rightValue.getName()+"[\"" + f + "\"]"))
+                locals.put(rightValue.getName()+"[\"" + f + "\"]", locals.get(leftValue.getName()));
+            }
+            // Return normal otherwise
+            return new ReturnType(ReturnType.TypeOfReturn.NORMAL);
+        }
+        return ProcessIfNode(locals, stmt);
+    }
+
+    public ReturnType ProcessIfNode(HashMap<String, InterpreterDataType> locals, StatementNode stmt) throws Exception{
+        if(stmt instanceof IfNode){
+            IfNode ifNode = (IfNode) stmt;
+            // Check if IfNode is true. If so then call InterpretedListOfStatements
+            if(GetIDT(ifNode.Condition, locals).toString().equals("1"))
+                return InterpretedListOfStatements(locals, ifNode.Block.getStatements());
+            // If this ifNode has no Next, return normal
+            if(ifNode.Next.isEmpty()){
+                return new ReturnType(ReturnType.TypeOfReturn.NORMAL);
+            }
+            // Create an optional NextIfNode to parse through the next if statements
+            Optional<IfNode> nextIfNode = Optional.of((IfNode) ifNode.Next.get());
+            while(true){
+                // if nextIfNode is an else, then break out of this while loop
+               if(nextIfNode.get().isElse())
+                   break;
+               // If the GetIDT of this if condition returns 1, return InterpretedListOfStatements
+               if(GetIDT(nextIfNode.get().Condition, locals).toString().equals("1"))
+                   return InterpretedListOfStatements(locals, nextIfNode.get().Block.getStatements());
+               // If the nextIfNode is empty, then return normal
+               if(nextIfNode.isEmpty())
+                   return new ReturnType(ReturnType.TypeOfReturn.NORMAL);
+               // If Next is empty, then return normal
+               if(nextIfNode.get().Next.isEmpty())
+                   return new ReturnType(ReturnType.TypeOfReturn.NORMAL);
+               // Set the nextIfNode to its next member
+               nextIfNode = Optional.of((IfNode) nextIfNode.get().Next.get());
+            }
+            // Return nextIfNode is broken out from while loop (this is for else cases)
+            return InterpretedListOfStatements(locals, nextIfNode.get().Block.getStatements());
+        }
+        return ProcessReturnNode(locals, stmt);
+    }
+
+    public ReturnType ProcessReturnNode(HashMap<String, InterpreterDataType> locals, StatementNode stmt) throws Exception{
+        if(stmt instanceof ReturnNode){
+            ReturnNode Return = (ReturnNode) stmt;
+            // Get returnable from stmt and turn it into a node
+            Node returnable = Return.getReturnable();
+            // Return a ReturnType with a RETURN type and a GETIDT for returnable
+            return new ReturnType(ReturnType.TypeOfReturn.RETURN, GetIDT(returnable, locals).toString());
+        }
+        return ProcessWhileNode(locals, stmt);
+    }
+
+    public ReturnType ProcessWhileNode(HashMap<String, InterpreterDataType> locals, StatementNode stmt) throws Exception{
+        if(stmt instanceof WhileNode){
+            WhileNode whileNode = (WhileNode) stmt;
+            // Create a while loop which runs as long as condition is 1
+            while(GetIDT(whileNode.getCondition(), locals).toString().equals("1")){
+                // Returned checks to see if InterpretedListOfStatements doesn't return NORMAL
+                ReturnType returned = InterpretedListOfStatements(locals, whileNode.getBlock().getStatements());
+                // If nor normal, return returned.
+                if(returned.getReturnType() != ReturnType.TypeOfReturn.NORMAL)
+                    return returned;
+            }
+            return new ReturnType(ReturnType.TypeOfReturn.NORMAL);
+        }
+        return null;
+    }
     public class LineManager{
         private LinkedList<String> stringMembers;
         public LineManager(List<String> list){

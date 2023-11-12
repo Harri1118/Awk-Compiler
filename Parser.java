@@ -644,12 +644,12 @@ public class Parser {
         // Checks for UnaryPlus operation
         if (!tokenManager.MatchAndRemove(Token.TokenType.ADD).isEmpty()) {
             Node Expression = ParseOperation().get();
-            return Optional.of(new OperationNode(Expression, OperationNode.PossibleOperations.PREINC));
+            return Optional.of(new AssignmentNode(Expression, new OperationNode(Expression, OperationNode.PossibleOperations.PREINC)));
         }
         // Checks for PREDEC operation
         else if (!tokenManager.MatchAndRemove(Token.TokenType.SUBT).isEmpty()) {
             Node Expression = ParseOperation().get();
-            return Optional.of(new OperationNode(Expression, OperationNode.PossibleOperations.PREDEC));
+            return Optional.of(new AssignmentNode(Expression, new OperationNode(Expression, OperationNode.PossibleOperations.PREDEC)));
         }
         // Checks for Logical not operation
         else if (!tokenManager.MatchAndRemove(Token.TokenType.EXLPT).isEmpty()) {
@@ -690,11 +690,11 @@ public class Parser {
         // Check for ADD token, returns POSTINC if so.
         if (!tokenManager.MatchAndRemove(Token.TokenType.ADD).isEmpty()) {
             VariableReferenceNode Variable = (VariableReferenceNode) Expression.get();
-            return Optional.of(new OperationNode(Variable, OperationNode.PossibleOperations.POSTINC));
+            return Optional.of(new AssignmentNode(Variable, new OperationNode(Variable, OperationNode.PossibleOperations.POSTINC)));
         }// Check for ADD token, returns PRETINC if so.
         else if (!tokenManager.MatchAndRemove(Token.TokenType.SUBT).isEmpty()) {
             VariableReferenceNode Variable = (VariableReferenceNode) Expression.get();
-            return Optional.of(new OperationNode(Variable, OperationNode.PossibleOperations.POSTDEC));
+            return Optional.of(new AssignmentNode(Variable, new OperationNode(Variable, OperationNode.PossibleOperations.POSTDEC)));
         }
         return Expression;
     }

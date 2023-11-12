@@ -6,6 +6,10 @@ public class DeleteNode extends StatementNode{
     public DeleteNode(Node n){
         Target = n;
     }
+
+    public Node getTarget(){
+        return Target;
+    }
 public String toString(){
         return "DELETE " + Target.toString();
 }

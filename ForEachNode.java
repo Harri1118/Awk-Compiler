@@ -15,6 +15,14 @@ public class ForEachNode extends StatementNode{
         emptyBlock = true;
     }
 
+    public Node getCondition(){
+        return Condition;
+    }
+
+    public BlockNode getBlock(){
+        return Block;
+    }
+
     public String toString(){
         // If true, don't call or mention block
         if(emptyBlock == true)

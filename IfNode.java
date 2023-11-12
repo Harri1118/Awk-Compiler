@@ -31,4 +31,8 @@ public class IfNode extends StatementNode{
             return "If(" + Condition.toString() + "){" + Block.toString() + "}";
         return "If(" + Condition.toString() + "){" + Block.toString() + "} else " + Next.get().toString();
     }
+
+    public boolean isElse(){
+        return isElse;
+    }
 }

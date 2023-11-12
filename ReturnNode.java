@@ -7,6 +7,10 @@ public class ReturnNode extends StatementNode{
         Returnable = n;
     }
 
+    public Node getReturnable(){
+        return Returnable;
+    }
+
     public String toString(){
         return "return " + Returnable.toString();
     }

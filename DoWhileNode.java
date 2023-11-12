@@ -1,5 +1,7 @@
 package icsi311;
 
+import java.util.LinkedList;
+
 public class DoWhileNode extends StatementNode{
     private Node Condition;
     private BlockNode Block;
@@ -12,4 +14,10 @@ public class DoWhileNode extends StatementNode{
         return "do{" + Block.toString() + "}\nwhile(" + Condition.toString() + ")";
     }
 
+    public LinkedList<StatementNode> getStatements(){
+        return Block.getStatements();
+    }
+    public Node getCondition(){
+        return Condition;
+    }
 }

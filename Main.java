@@ -22,13 +22,12 @@ public class Main {
             // the input file path.
             Path inputPath = Paths.get("input.txt");
             Interpreter interpreter = new Interpreter(new ProgramNode(), Optional.of(inputPath));
-            Node n = parser.ParseOperation().get();
-            interpreter.GetIDT(n, interpreter.GlobalVariables);
-            System.out.println(interpreter.GlobalVariables.toString());
-            parser.AcceptSeparators();
-            n = parser.ParseOperation().get();
-            interpreter.GetIDT(n, interpreter.GlobalVariables);
-            System.out.println(interpreter.GlobalVariables.toString());
+            ProgramNode p = parser.Parse();
+            System.out.println(interpreter.InterpretedListOfStatements(null, p.OTHER.get(0).getStatements()));
+            System.out.println(interpreter.GlobalVariables.get("a").toString());
+            System.out.println(interpreter.GlobalVariables.get("b").toString());
+            System.out.println(interpreter.GlobalVariables.get("c").toString());
+            System.out.println(interpreter.GlobalVariables.get("d").toString());
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }

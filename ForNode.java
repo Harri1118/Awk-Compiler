@@ -24,11 +24,18 @@ public class ForNode extends StatementNode{
         return "\nfor(" + ConditionListToString() + "){\n\t" + Block.toString() + "\n}\n";
     }
 
+    public LinkedList<Node> getCondition(){
+        return Condition;
+    }
     public String ConditionListToString(){
         String f = "";
         for(int i  = 0; i < Condition.size(); i++)
             f += Condition.get(i).toString() + ", ";
         f = f = f.substring(0,f.length()-2);
         return f;
+    }
+
+    public BlockNode getBlock(){
+        return Block;
     }
 }

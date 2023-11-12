@@ -1992,7 +1992,7 @@ public class UnitTests {
         assertEquals("2",interpreter.GetIDT(p.ParseOperation().get(), null).toString());
         lexer = new Lexer("c");
         p = new Parser(lexer.getTokens());
-        assertEquals("0", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        assertEquals("", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
         lexer = new Lexer("a[1]");
         p = new Parser(lexer.getTokens());
         assertEquals("test", interpreter.GetIDT(p.ParseOperation().get(), null).toString());

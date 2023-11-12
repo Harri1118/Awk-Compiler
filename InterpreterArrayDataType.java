@@ -58,4 +58,8 @@ public class InterpreterArrayDataType extends InterpreterDataType{
             return true;
         return false;
     }
+
+    public HashMap<String, InterpreterDataType> getContent(){
+        return storage;
+    }
 }

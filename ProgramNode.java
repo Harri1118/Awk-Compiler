@@ -49,6 +49,7 @@ public class ProgramNode {
    public LinkedList<FunctionDefinitionNode> getFuncs(){
       return functions;
    }
+
    public String betterParams(String s){
       return s.substring(1,s.length()-1);
    }

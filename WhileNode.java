@@ -8,6 +8,13 @@ public class WhileNode extends StatementNode{
         Condition = c;
     }
 
+    public Node getCondition(){
+        return Condition;
+    }
+
+    public BlockNode getBlock(){
+        return Block;
+    }
     public String toString(){
         return "while(" + Condition.toString() + "){" + Block.toString() + "}";
     }
