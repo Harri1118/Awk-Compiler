@@ -41,4 +41,8 @@ public class BlockNode extends Node {
         }
         return f;
     }
+
+    public Optional<Node> getCondition(){
+        return Condition;
+    }
 }

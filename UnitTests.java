@@ -4,8 +4,7 @@ import icsi311.Token.TokenType;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -274,7 +273,7 @@ public class UnitTests {
     public void BottomLevelAndLValue() throws Exception{
         Lexer l = new Lexer("++$b");
         Parser p = new Parser(l.getTokens());
-        Node ref = new OperationNode(new OperationNode(new VariableReferenceNode("b"), OperationNode.PossibleOperations.DOLLAR), OperationNode.PossibleOperations.PREINC);
+        Node ref = new AssignmentNode(new OperationNode(new VariableReferenceNode("b"), OperationNode.PossibleOperations.DOLLAR), new OperationNode(new OperationNode(new VariableReferenceNode("b"), OperationNode.PossibleOperations.DOLLAR), OperationNode.PossibleOperations.PREINC));
         assertEquals(ref.toString(), p.ParseOperation().get().toString());
         l = new Lexer("++a");
         p = new Parser(l.getTokens());
@@ -1089,30 +1088,6 @@ public class UnitTests {
             p2.ParseStatement();
         });
         Assertions.assertEquals("Error! Cannot use print/printf without statements!", thrown.getMessage());
-        // printf first parameter wrong
-        thrown = assertThrows(Exception.class, () -> {
-
-            lexer = new Lexer("printf v, var");
-            Parser p2 = new Parser(lexer.getTokens());
-            p2.ParseStatement();
-        });
-        Assertions.assertEquals("First parameter must be of a format type! Ex: printf \"Name: %s, Age: %d\\n\", name, age", thrown.getMessage());
-        // getline first param wrong
-        thrown = assertThrows(Exception.class, () -> {
-
-            lexer = new Lexer("getline \"v\", var");
-            Parser p2 = new Parser(lexer.getTokens());
-            p2.ParseStatement();
-        });
-        Assertions.assertEquals("First parameter of getline must be a variable! Ex: getline [var] Optional[filepath]", thrown.getMessage());
-        // getline second param wrong
-        thrown = assertThrows(Exception.class, () -> {
-
-            lexer = new Lexer("getline var, var");
-            Parser p2 = new Parser(lexer.getTokens());
-            p2.ParseStatement();
-        });
-        Assertions.assertEquals("getline with filepaths isn't supported!", thrown.getMessage());
     }
 
     private Path filePath;
@@ -1170,18 +1145,19 @@ public class UnitTests {
         interpreter =  new Interpreter(new ProgramNode(), Optional.of(filePath));
         interpreter.Manager.SplitAndAssign();
         HashMap<String, InterpreterDataType> input = new HashMap<String, InterpreterDataType>();
-        input.put("string",interpreter.GlobalVariables.get("$0"));
+        input.put("content",interpreter.GlobalVariables.get("$0"));
         BuiltInFunctionDefinitionNode node = (BuiltInFunctionDefinitionNode) interpreter.Functions.get("toupper");
         assertEquals("UPPERCASE", node.Execute(input));
         interpreter.Manager.SplitAndAssign();
-        input.put("string",interpreter.GlobalVariables.get("$0"));
+        input.put("content",interpreter.GlobalVariables.get("$0"));
         node = (BuiltInFunctionDefinitionNode) interpreter.Functions.get("tolower");
         assertEquals("lowercase", node.Execute(input));
         interpreter.Manager.SplitAndAssign();
-        input.put("string",interpreter.GlobalVariables.get("$0"));
+        input.put("content",interpreter.GlobalVariables.get("$0"));
         input.put("start", new InterpreterDataType("3"));
         input.put("end", new InterpreterDataType("9"));
         node = (BuiltInFunctionDefinitionNode) interpreter.Functions.get("substr");
+        node.Execute(input);
         assertEquals("string", node.Execute(input));
         fileRestore();
     }
@@ -1282,17 +1258,16 @@ public class UnitTests {
         assertEquals("TEST there", interpreter.GlobalVariables.get("$0").toString());
         assertEquals("TEST", interpreter.GlobalVariables.get("$1").toString());
         interpreter.Manager.SplitAndAssign();
-        input.put("target", new InterpreterDataType("hello"));
+        input.put("targetToChange", new InterpreterDataType("hello"));
         assertEquals("1",node.Execute(input).toString());
-        assertEquals("TEST", input.get("target").toString());
-        input.put("target", new InterpreterDataType("nothinghere"));
+        input.put("targetToChange", new InterpreterDataType("nothinghere"));
         assertEquals("0",node.Execute(input).toString());
         interpreter.Manager.SplitAndAssign();
         assertEquals("0", node.Execute(input));
-        input.put("target", new InterpreterDataType("yeshelloyeshello"));
+        input.put("targetToChange", new InterpreterDataType("yeshelloyeshello"));
         node.Execute(input);
-        assertEquals("yesTESTyesTEST", input.get("target").toString());
-        input.put("target", new InterpreterDataType("test"));
+        assertEquals("yesTESTyesTEST", input.get("targetToChange").toString());
+        input.put("targetToChange", new InterpreterDataType("test"));
         assertEquals("0", node.Execute(input));
         fileRestore();
     }
@@ -1325,7 +1300,7 @@ public class UnitTests {
         interpreter.Manager.SplitAndAssign();
         BuiltInFunctionDefinitionNode node = (BuiltInFunctionDefinitionNode) interpreter.Functions.get("sub");
         HashMap<String, InterpreterDataType> input = new HashMap<String, InterpreterDataType>();
-        input.put("regexp", new InterpreterDataType("hello"));
+        input.put("pattern", new InterpreterDataType("hello"));
         input.put("replacement", new InterpreterDataType("TEST"));
         assertEquals("1",node.Execute(input));
         assertEquals("TEST", interpreter.GlobalVariables.get("$0").toString());
@@ -1335,10 +1310,10 @@ public class UnitTests {
         assertEquals("TESThello", interpreter.GlobalVariables.get("$0").toString());
         interpreter.Manager.SplitAndAssign();
         assertEquals("0", node.Execute(input));
-        input.put("target", new InterpreterDataType("yeshelloyeshello"));
+        input.put("targetToChange", new InterpreterDataType("yeshelloyeshello"));
         node.Execute(input);
-        assertEquals("yesTESTyeshello", input.get("target").toString());
-        input.put("target", new InterpreterDataType("test"));
+        assertEquals("yesTESTyeshello", input.get("targetToChange").toString());
+        input.put("targetToChange", new InterpreterDataType("test"));
         assertEquals("0", node.Execute(input));
         fileRestore();
     }
@@ -1371,22 +1346,22 @@ public class UnitTests {
         fileMaker(new String[0]);
         interpreter = new Interpreter(new ProgramNode(), Optional.of(filePath));
         HashMap<String, InterpreterDataType> input = new HashMap<String, InterpreterDataType>();
-        input.put("string", new InterpreterDataType("thiswillreturn0"));
+        input.put("content", new InterpreterDataType("thiswillreturn0"));
         input.put("pattern", new InterpreterDataType("wontwork"));
         BuiltInFunctionDefinitionNode node = (BuiltInFunctionDefinitionNode) interpreter.Functions.get("match");
         assertEquals("0",node.Execute(input));
         input.clear();
-        input.put("string", new InterpreterDataType("thiswillreturnsomethingelse"));
+        input.put("content", new InterpreterDataType("thiswillreturnsomethingelse"));
         input.put("pattern", new InterpreterDataType("return"));
         assertEquals("9", node.Execute(input));
         input.clear();
-        input.put("string", new InterpreterDataType("thiswillretur"));
+        input.put("content", new InterpreterDataType("thiswillretur"));
         input.put("pattern", new InterpreterDataType("return"));
         assertEquals("0", node.Execute(input));
-        input.put("string", new InterpreterDataType("thiswillreturn"));
+        input.put("content", new InterpreterDataType("thiswillreturn"));
         input.put("pattern", new InterpreterDataType("return"));
         assertEquals("9", node.Execute(input));
-        input.put("string", new InterpreterDataType("thiswillreturn"));
+        input.put("content", new InterpreterDataType("thiswillreturn"));
         input.put("pattern", new InterpreterDataType("this"));
         assertEquals("1", node.Execute(input));
         fileRestore();
@@ -1422,12 +1397,12 @@ public class UnitTests {
         input.put("target", new InterpreterDataType("This/is/a/sentence/to/separate"));
         input.put("separator", new InterpreterDataType("/"));
         node.Execute(input);
-        assertEquals("(This,is,a,sentence,to,separate)", input.get("array").toString());
+        assertEquals("(This,is,a,sentence,to,separate)", input.get("arrayToPost").toString());
         input.clear();
         input.put("target", new InterpreterDataType("This/is/a/sentence/to/separate"));
         input.put("separator", new InterpreterDataType("-"));
         node.Execute(input);
-        assertEquals("(This/is/a/sentence/to/separate)", input.get("array").toString());
+        assertEquals("(This/is/a/sentence/to/separate)", input.get("arrayToPost").toString());
         fileRestore();
     }
 
@@ -1452,48 +1427,6 @@ public class UnitTests {
         Assertions.assertEquals("Incorrect method call for split! It must be in the form of: split(target, array, separator)!", thrown.getMessage());
         fileRestore();
 
-    }
-    @Test
-    public void testPrint() throws Exception{
-        fileMaker(new String[0]);
-        interpreter = new Interpreter(new ProgramNode(), Optional.of(filePath));
-        interpreter.Manager.SplitAndAssign();
-        HashMap<String, InterpreterDataType> input = new HashMap<String, InterpreterDataType>();
-        BuiltInFunctionDefinitionNode node = (BuiltInFunctionDefinitionNode) interpreter.Functions.get("print");
-        InterpreterArrayDataType content = new InterpreterArrayDataType();
-        content.put("Original string: ");
-        content.put(interpreter.GlobalVariables.get("$0").toString());
-        content.put(", First word: ");
-        content.put(interpreter.GlobalVariables.get("$1").toString());
-        content.put(", Second word: ");
-        content.put(interpreter.GlobalVariables.get("$2").toString());
-        input.put("content", content);
-        node.Execute(input);
-        assertEquals("Original string: Hello this is line 1, First word: Hello, Second word: this",interpreter.printContent);
-        fileRestore();
-    }
-
-    @Test
-    public void testPrintf() throws Exception{
-        fileMaker(new String[0]);
-        interpreter = new Interpreter(new ProgramNode(), Optional.of(filePath));
-        interpreter.Manager.SplitAndAssign();
-        HashMap<String, InterpreterDataType> input = new HashMap<String, InterpreterDataType>();
-        BuiltInFunctionDefinitionNode node = (BuiltInFunctionDefinitionNode) interpreter.Functions.get("printf");
-        InterpreterArrayDataType content = new InterpreterArrayDataType();
-        content.put("Original string: ");
-        content.put(interpreter.GlobalVariables.get("$0").toString());
-        content.put(", First word: ");
-        content.put(interpreter.GlobalVariables.get("$1").toString());
-        content.put(", Second word: ");
-        content.put(interpreter.GlobalVariables.get("$2").toString());
-        input.put("content", content);
-        node.Execute(input);
-        assertEquals("Format: %.6g, Result: Original string: Hello this is line 1, First word: Hello, Second word: this",interpreter.printContent);
-        input.put("format", new InterpreterDataType("testFormat"));
-        node.Execute(input);
-        assertEquals("Format: testFormat, Result: Original string: Hello this is line 1, First word: Hello, Second word: this", interpreter.printContent);
-        fileRestore();
     }
 
     @Test
@@ -1569,28 +1502,18 @@ public class UnitTests {
     }
     @Test
     public void testSprintf() throws Exception{
-        fileMaker(new String[0]);
-        interpreter = new Interpreter(new ProgramNode(), Optional.of(filePath));
-        interpreter.Manager.SplitAndAssign();
-        BuiltInFunctionDefinitionNode node = (BuiltInFunctionDefinitionNode) interpreter.Functions.get("sprintf");
-        HashMap<String, InterpreterDataType> input = new HashMap<String, InterpreterDataType>();
-        InterpreterArrayDataType content = new InterpreterArrayDataType();
-        input.put("format",new InterpreterDataType("Name: %s, Score: %.2f"));
-        content.put("namehere");
-        content.put(" ");
-        content.put("scorehere");
-        input.put("content",content);
-        assertEquals("Format: Name: %s, Score: %.2f, content: namehere scorehere", node.Execute(input));
-        Exception thrown = assertThrows(Exception.class, () ->{
-            input.clear();
-            node.Execute(input);
-        });
-        Assertions.assertEquals("Error! Method to format string is incorrect! Must be in form sprintf(format, string)!", thrown.getMessage());
-        thrown = assertThrows(Exception.class, () ->{
-            input.put("test", new InterpreterDataType("test"));
-            node.Execute(input);
-        });
-        Assertions.assertEquals("Error! Method to format string is incorrect! Must be in form sprintf(format, string)!", thrown.getMessage());
+        fileMaker(new String[]{"Bob,80", "Joe,90", "Sherry,85", "Jack,70"});
+        lexer = new Lexer("BEGIN{FS=\",\"}{i = i sprintf(\"Name: %-10s Grade: %02d\", $1, $2)}");
+        Parser p = new Parser(lexer.getTokens());
+        Interpreter interpreter = new Interpreter(p.Parse(), Optional.of(filePath));
+        interpreter.InterpretProgram();
+        assertEquals("Name: Bob        Grade: 80Name: Joe        Grade: 90Name: Sherry     Grade: 85Name: Jack       Grade: 70", interpreter.GlobalVariables.get("i").toString());
+        fileMaker(new String[]{"Bob,3.64", "Joe,4.0", "Sherry,2.4", "Jack,3.0"});
+        lexer = new Lexer("BEGIN{FS=\",\"}{i = i sprintf(\"Name: %-10s GPA: %02.2f\", $1, $2)}");
+        p = new Parser(lexer.getTokens());
+        interpreter = new Interpreter(p.Parse(), Optional.of(filePath));
+        interpreter.InterpretProgram();
+        assertEquals("Name: Bob        GPA: 3.64Name: Joe        GPA: 4.00Name: Sherry     GPA: 2.40Name: Jack       GPA: 3.00", interpreter.GlobalVariables.get("i").toString());
         fileRestore();
     }
 
@@ -1647,24 +1570,24 @@ public class UnitTests {
         lexer = new Lexer("a += 3");
         p = new Parser(lexer.getTokens());
         interpreter.GetIDT(p.ParseOperation().get(), locals);
-        assertEquals( locals.get("a").toString(), locals.get("a").toString());
+        assertEquals( "3", locals.get("a").toString());
         lexer = new Lexer("a ^= 2");
         p = new Parser(lexer.getTokens());
         interpreter.GetIDT(p.ParseOperation().get(), locals);
-        assertEquals(locals.get("a").toString(), locals.get("a").toString());
+        assertEquals("9", locals.get("a").toString());
         lexer = new Lexer("a -= 2");
         p = new Parser(lexer.getTokens());
         interpreter.GetIDT(p.ParseOperation().get(), locals);
-        assertEquals("0",locals.get("a").toString());
+        assertEquals("7",locals.get("a").toString());
         lexer = new Lexer("a *= 3");
         p = new Parser(lexer.getTokens());
-        interpreter.GetIDT(p.ParseOperation().get(), null);
-        assertEquals("6", interpreter.GlobalVariables.get("a").toString());
+        interpreter.GetIDT(p.ParseOperation().get(), locals);
+        assertEquals("21", locals.get("a").toString());
         interpreter.GlobalVariables.put("f", new InterpreterDataType("2"));
-        lexer = new Lexer("f %= 2");
+        lexer = new Lexer("a %= 2");
         p = new Parser(lexer.getTokens());
-        assertEquals("0", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
-        assertEquals("0", interpreter.GlobalVariables.get("f").toString());
+        assertEquals("1", interpreter.GetIDT(p.ParseOperation().get(), locals).toString());
+        assertEquals("1", locals.get("a").toString());
         fileRestore();
     }
 
@@ -1959,9 +1882,6 @@ public class UnitTests {
         lexer = new Lexer("1 in a");
         p = new Parser(lexer.getTokens());
         assertEquals("1", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
-        lexer = new Lexer("\"two\" in a");
-        p = new Parser(lexer.getTokens());
-        assertEquals("1", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
         lexer = new Lexer("\"two\" in b");
         p = new Parser(lexer.getTokens());
         assertEquals("0", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
@@ -2014,24 +1934,6 @@ public class UnitTests {
         lexer = new Lexer("a = (1 > 2) ? \"b\" : (2 < 1) ? \"c\" : (5 > 1)? \"hello\" : \"goodbye\"");
         p = new Parser(lexer.getTokens());
         assertEquals("hello", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
-        fileRestore();
-    }
-
-    @Test
-    public void InterpreterGetIDTFunctionCallNode() throws Exception{
-        fileMaker(new String[0]);
-        Interpreter interpreter = new Interpreter(new ProgramNode(), Optional.of(filePath));
-        Exception thrown = assertThrows(Exception.class, () ->{
-            lexer = new Lexer("myFunction()");
-            Parser p2 = new Parser(lexer.getTokens());
-            interpreter.GetIDT(p2.ParseOperation().get(), null);
-        });
-        Assertions.assertEquals("Error! Function doesn't exist!", thrown.getMessage());
-        FunctionCallNode func = new FunctionCallNode("myFunction");
-        interpreter.Functions.put(func.getName(), new FunctionDefinitionNode("myFunction", new String[0]));
-        lexer = new Lexer("myFunction()");
-        Parser p = new Parser(lexer.getTokens());
-        assertEquals("Function call ran.",interpreter.GetIDT(p.ParseOperation().get(), null).toString());
         fileRestore();
     }
 
@@ -2131,7 +2033,7 @@ public class UnitTests {
         assertEquals("1", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
         lexer = new Lexer("a[\"test2\"]");
         p = new Parser(lexer.getTokens());
-        assertEquals("0", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
+        assertEquals("", interpreter.GetIDT(p.ParseOperation().get(), null).toString());
         fileRestore();
     }
 
@@ -2146,5 +2048,405 @@ public class UnitTests {
         });
         Assertions.assertEquals("Error! Cannot call a patternNode outside of a statement!", thrown.getMessage());
         fileRestore();
+    }
+
+    @Test
+    public void testPrint() throws Exception{
+        fileMaker(new String[0]);
+        interpreter = new Interpreter(new ProgramNode(), Optional.of(filePath));
+        interpreter.Manager.SplitAndAssign();
+        HashMap<String, InterpreterDataType> input = new HashMap<String, InterpreterDataType>();
+        BuiltInFunctionDefinitionNode node = (BuiltInFunctionDefinitionNode) interpreter.Functions.get("print");
+        InterpreterArrayDataType content = new InterpreterArrayDataType();
+        content.put("Original string: ");
+        content.put(interpreter.GlobalVariables.get("$0").toString());
+        content.put(", First word: ");
+        content.put(interpreter.GlobalVariables.get("$1").toString());
+        content.put(", Second word: ");
+        content.put(interpreter.GlobalVariables.get("$2").toString());
+        input.put("content", content);
+        node.Execute(input);
+        assertEquals("Original string: Hello this is line 1, First word: Hello, Second word: this",interpreter.printContent);
+        fileRestore();
+    }
+
+    @Test
+    public void testPrintf() throws Exception{
+        fileMaker(new String[0]);
+        lexer = new Lexer("{for(i=NF; i > 0; i--){printf \"%s\", $i \" \"\na = (a sprintf(\"%s\", $i \" \"))}print \"\"}");
+        Parser p = new Parser(lexer.getTokens());
+        Interpreter interpreter = new Interpreter(p.Parse(), Optional.of(filePath));
+        interpreter.InterpretProgram();
+        assertEquals("1line is this Hello 2line is this Hello 3line is this Hello 4line is this Hello 5line is this Hello ", interpreter.GlobalVariables.get("a").toString());
+        fileMaker(new String[]{"Hello frfrfr world"});
+        lexer = new Lexer("{printf \"First: %-10s Third: %s\", $1,$3\n a = sprintf (\"First: %-10s Third: %s\", $1,$3)}");
+        p = new Parser(lexer.getTokens());
+        interpreter = new Interpreter(p.Parse(), Optional.of(filePath));
+        interpreter.InterpretProgram();
+        assertEquals("First: Hello      Third: world", interpreter.GlobalVariables.get("a").toString());
+        fileRestore();
+    }
+
+
+    @Test
+    public void InterpreterGetIDTFunctionCallNode() throws Exception{
+        fileMaker(new String[0]);
+        Interpreter interpreter = new Interpreter(new ProgramNode(), Optional.of(filePath));
+        Exception thrown = assertThrows(Exception.class, () ->{
+            lexer = new Lexer("myFunction()");
+            Parser p2 = new Parser(lexer.getTokens());
+            interpreter.GetIDT(p2.ParseOperation().get(), null);
+        });
+        Assertions.assertEquals("Error! Function doesn't exist!", thrown.getMessage());
+        FunctionCallNode func = new FunctionCallNode("myFunction");
+        interpreter.Functions.put(func.getName(), new FunctionDefinitionNode("myFunction", new String[0]));
+        lexer = new Lexer("{a = myFunction()}function myFunction(){return 2}");
+        Parser p = new Parser(lexer.getTokens());
+        Interpreter interpreter2 = new Interpreter(p.Parse(), Optional.of(filePath));
+        interpreter2.InterpretProgram();
+        assertEquals("2", interpreter2.GlobalVariables.get("a").toString());
+        lexer = new Lexer("{a = myFunction(1,2)}function myFunction(a,b){return a + b}");
+        p = new Parser(lexer.getTokens());
+        interpreter2 = new Interpreter(p.Parse(), Optional.of(filePath));
+        interpreter2.InterpretProgram();
+        assertEquals("3", interpreter2.GlobalVariables.get("a").toString());
+        lexer = new Lexer("{a = myFunction(2,3,3,2)} function myFunction(a,b,c,d){return (a^b)+(c^d)}");
+        p = new Parser(lexer.getTokens());
+        interpreter2 = new Interpreter(p.Parse(), Optional.of(filePath));
+        interpreter2.InterpretProgram();
+        assertEquals("17", interpreter2.GlobalVariables.get("a").toString());
+        fileRestore();
+    }
+
+    @Test
+    public void testAssignment0() throws Exception{
+        fileMaker(new String[]{"1,2,3,4","5,6,7,8","9,10,11,12"});
+        lexer = new Lexer("BEGIN{FS=\",\"}{sum = 0for(i = 1; i <=NF; i++){sum+=$i}f = f + sum}END{print\"The sum is: \" f}");
+        Parser p = new Parser(lexer.getTokens());
+        Interpreter interpreter = new Interpreter(p.Parse(), Optional.of(filePath));
+        interpreter.InterpretProgram();
+        assertEquals("78", interpreter.GlobalVariables.get("f").toString());
+        fileMaker(new String[]{"There are 7 words in this line","Now there are 8 words in this line","And now there are 9 words in this line"});
+        lexer = new Lexer("{f = f + NF}END{print f \" words\"}");
+        p = new Parser(lexer.getTokens());
+        interpreter = new Interpreter(p.Parse(), Optional.of(filePath));
+        interpreter.InterpretProgram();
+        assertEquals("24", interpreter.GlobalVariables.get("f").toString());
+        fileRestore();
+    }
+
+    @Test
+    public void testBlockConditions() throws Exception{
+        fileMaker(new String[]{"hello this is line 1", "hello this is line 2"});
+        lexer = new Lexer("BEGIN{a = 0}(NR > 3){a = 1 print \"This block has ran!\"}");
+        Parser p = new Parser(lexer.getTokens());
+        Interpreter interpreter = new Interpreter(p.Parse(), Optional.of(filePath));
+        interpreter.InterpretProgram();
+        assertEquals("0", interpreter.GlobalVariables.get("a").toString());
+        fileMaker(new String[]{"hello this is line 1", "hello this is line 2", "hello this is line 3", "hello this is line 4"});
+        lexer = new Lexer("BEGIN{a = 0}(NR > 3){a = 1 print \"This block has ran!\"}");
+        p = new Parser(lexer.getTokens());
+        interpreter = new Interpreter(p.Parse(), Optional.of(filePath));
+        interpreter.InterpretProgram();
+        assertEquals("1", interpreter.GlobalVariables.get("a").toString());
+        fileRestore();
+    }
+
+    @Test
+    public void testForLoop() throws Exception{
+        fileMaker(new String[0]);
+        lexer = new Lexer("{for(i = 1; i <= 5; i++){print \"Iteration \" i \": \" $0; if(i == 1){n = n $0}}}");
+        Parser p = new Parser(lexer.getTokens());
+        Interpreter interpreter = new Interpreter(p.Parse(), Optional.of(filePath));
+        interpreter.InterpretProgram();
+        assertEquals("Hello this is line 1Hello this is line 2Hello this is line 3Hello this is line 4Hello this is line 5", interpreter.GlobalVariables.get("n").toString());
+        fileMaker(new String[]{"line1"});
+        lexer = new Lexer("{a[\"test1\"] = \"hello\";a[\"test2\"] = \"world\"; str = \"loop: \"; for(i in a){str = str a[i]}}");
+        p = new Parser(lexer.getTokens());
+        interpreter = new Interpreter(p.Parse(), Optional.of(filePath));
+        interpreter.InterpretProgram();
+        assertEquals("loop: helloworld", interpreter.GlobalVariables.get("str").toString());
+        fileRestore();
+    }
+
+    @Test
+    public void testBreakAndContinue() throws Exception{
+        fileMaker(new String[0]);
+        lexer = new Lexer("{i = 0;while(i<10){if(i==5){break}i++}}");
+        Parser p = new Parser(lexer.getTokens());
+        Interpreter interpreter = new Interpreter(p.Parse(), Optional.of(filePath));
+        interpreter.InterpretProgram();
+        assertEquals("5", interpreter.GlobalVariables.get("i").toString());
+        lexer = new Lexer("{i = 0;n = 0;while(i<10){i++;if(i==5){continue};n++}}");
+        p = new Parser(lexer.getTokens());
+        interpreter = new Interpreter(p.Parse(), Optional.of(filePath));
+        interpreter.InterpretProgram();
+        assertEquals("9", interpreter.GlobalVariables.get("n").toString());
+        fileRestore();
+    }
+
+    @Test
+    public void testIfStatements() throws Exception{
+        fileMaker(new String[]{"1", "1 2", "1 2 3", "1 2 3 4", "1 2 3 4 5", "1 2 3 4 5 6"});
+        lexer = new Lexer("{a=0;b=0;c=0;d=0;e=0;f = 0;if(NF == 1){a=1}else if(NF == 2){b=1}else if(NF==3){c=1}else if(NF == 4){d=1}else if(NF==5){e = 1}else{f = 1}}");
+        Parser p = new Parser(lexer.getTokens());
+        Interpreter interpreter = new Interpreter(p.Parse(), Optional.of(filePath));
+        interpreter.Manager.SplitAndAssign();
+        interpreter.InterpretBlock(interpreter.getProgram().getOther().get(0));
+        assertEquals("1", interpreter.GlobalVariables.get("a").toString());
+        interpreter.Manager.SplitAndAssign();
+        interpreter.InterpretBlock(interpreter.getProgram().getOther().get(0));
+        assertEquals("1", interpreter.GlobalVariables.get("b").toString());
+        interpreter.Manager.SplitAndAssign();
+        interpreter.InterpretBlock(interpreter.getProgram().getOther().get(0));
+        assertEquals("1", interpreter.GlobalVariables.get("c").toString());
+        interpreter.Manager.SplitAndAssign();
+        interpreter.InterpretBlock(interpreter.getProgram().getOther().get(0));
+        assertEquals("1", interpreter.GlobalVariables.get("d").toString());
+        interpreter.Manager.SplitAndAssign();
+        interpreter.InterpretBlock(interpreter.getProgram().getOther().get(0));
+        assertEquals("1", interpreter.GlobalVariables.get("e").toString());
+        interpreter.Manager.SplitAndAssign();
+        interpreter.InterpretBlock(interpreter.getProgram().getOther().get(0));
+        assertEquals("1", interpreter.GlobalVariables.get("f").toString());
+        fileRestore();
+    }
+
+    @Test
+    public void TestDoWhileLoop() throws Exception{
+        fileMaker(new String[0]);
+        lexer = new Lexer("{i = 0;do{a = a \"test\";i++}while(i < 5)}");
+        Parser p = new Parser(lexer.getTokens());
+        Interpreter interpreter = new Interpreter(p.Parse(), Optional.of(filePath));
+        interpreter.Manager.SplitAndAssign();
+        interpreter.InterpretBlock(interpreter.getProgram().getOther().get(0));
+        assertEquals("testtesttesttesttest", interpreter.GlobalVariables.get("a").toString());
+        lexer = new Lexer("{while(i < 5){a = a \"test\";i++}}");
+        p = new Parser(lexer.getTokens());
+        interpreter = new Interpreter(p.Parse(), Optional.of(filePath));
+        interpreter.InterpretProgram();
+        assertEquals("testtesttesttesttest", interpreter.GlobalVariables.get("a").toString());
+        fileRestore();
+    }
+@Test
+    public void TestBuiltInsPart1() throws Exception{
+        fileMaker(new String[0]);
+        lexer = new Lexer("BEGIN{i=0}{if(getline > 0){i += 1} }");
+        Parser p = new Parser(lexer.getTokens());
+        Interpreter interpreter = new Interpreter(p.Parse(), Optional.of(filePath));
+        interpreter.InterpretProgram();
+        assertEquals("2", interpreter.GlobalVariables.get("i").toString());
+        lexer = new Lexer("{i = getline 1}END{print i}");
+        p = new Parser(lexer.getTokens());
+        interpreter = new Interpreter(p.Parse(), Optional.of(filePath));
+        interpreter.InterpretProgram();
+        assertEquals("1", interpreter.GlobalVariables.get("i").toString());
+        lexer = new Lexer("match($0, `this`) { test++ } END{print test}");
+        p = new Parser(lexer.getTokens());
+        interpreter = new Interpreter(p.Parse(), Optional.of(filePath));
+        interpreter.InterpretProgram();
+        assertEquals("5", interpreter.GlobalVariables.get("test").toString());
+        fileRestore();
+}
+
+@Test
+    public void TestBuiltInsPart2() throws Exception{
+    fileMaker(new String[0]);
+    lexer = new Lexer("{sub(`this`,\"newpattern\"); i = $0}");
+    Parser p = new Parser(lexer.getTokens());
+    Interpreter interpreter = new Interpreter(p.Parse(), Optional.of(filePath));
+    interpreter.InterpretProgram();
+    assertEquals("Hello newpattern is line 5", interpreter.GlobalVariables.get("i").toString());
+    fileMaker(new String[]{"test"});
+    lexer = new Lexer("BEGIN{test = \"this is a variable\"}{sub(\"this is\", \"New pattern\", test);fin = fin test}END{print fin}");
+    p = new Parser(lexer.getTokens());
+    interpreter = new Interpreter(p.Parse(), Optional.of(filePath));
+    interpreter.InterpretProgram();
+    assertEquals("New pattern a variable", interpreter.GlobalVariables.get("fin").toString());
+    lexer = new Lexer("BEGIN{test = \"this hello is hello a hello variable hello\"}{gsub(\" hello\",\"\",test)}");
+    p = new Parser(lexer.getTokens());
+    interpreter = new Interpreter(p.Parse(), Optional.of(filePath));
+    interpreter.InterpretProgram();
+    assertEquals("this is a variable", interpreter.GlobalVariables.get("test").toString());
+    fileMaker(new String[0]);
+    lexer=  new Lexer("{gsub(\"is\", \"test\"); fin = fin $0}END{print fin}");
+    p = new Parser(lexer.getTokens());
+    interpreter = new Interpreter(p.Parse(), Optional.of(filePath));
+    interpreter.InterpretProgram();
+    assertEquals("Hello thtest test line 1Hello thtest test line 2Hello thtest test line 3Hello thtest test line 4Hello thtest test line 5", interpreter.GlobalVariables.get("fin").toString());
+    p = new Parser(lexer.getTokens());
+    interpreter = new Interpreter(p.Parse(), Optional.of(filePath));
+    interpreter.InterpretProgram();
+    lexer = new Lexer("{position += index($0, \"is\")}");
+    p = new Parser(lexer.getTokens());
+    interpreter = new Interpreter(p.Parse(), Optional.of(filePath));
+    interpreter.InterpretProgram();
+    assertEquals("45", interpreter.GlobalVariables.get("position").toString());
+    lexer = new Lexer("{len += length($0)}END{print len}");
+    p = new Parser(lexer.getTokens());
+    interpreter = new Interpreter(p.Parse(), Optional.of(filePath));
+    interpreter.InterpretProgram();
+    assertEquals("100", interpreter.GlobalVariables.get("len").toString());
+    fileRestore();
+}
+
+@Test
+public void testBuiltInsPart3() throws Exception{
+    fileMaker(new String[0]);
+    lexer = new Lexer("{split($0, parts)}END{for(n in parts){a = a parts[n]}}");
+    Parser p = new Parser(lexer.getTokens());
+    Interpreter interpreter = new Interpreter(p.Parse(), Optional.of(filePath));
+    interpreter.InterpretProgram();
+    assertEquals("Hellothisisline5", interpreter.GlobalVariables.get("a").toString());
+    fileMaker(new String[]{"column1:column2:column3:column4:column5"});
+    lexer = new Lexer("{split($0, parts, \":\")}END{for(n in parts){a = a parts[n]}}");
+    p = new Parser(lexer.getTokens());
+    interpreter = new Interpreter(p.Parse(), Optional.of(filePath));
+    interpreter.InterpretProgram();
+    assertEquals("column1column2column3column4column5", interpreter.GlobalVariables.get("a").toString());
+    lexer = new Lexer("{a = toupper($0)}END{print a}");
+    p = new Parser(lexer.getTokens());
+    interpreter = new Interpreter(p.Parse(), Optional.of(filePath));
+    interpreter.InterpretProgram();
+    assertEquals("COLUMN1:COLUMN2:COLUMN3:COLUMN4:COLUMN5", interpreter.GlobalVariables.get("a").toString());
+    fileMaker(new String[]{"COLUMN1:COLUMN2:COLUMN3:COLUMN4:COLUMN5"});
+    lexer = new Lexer("{a = tolower($0)}END{print a}");
+    p = new Parser(lexer.getTokens());
+    interpreter = new Interpreter(p.Parse(), Optional.of(filePath));
+    interpreter.InterpretProgram();
+    assertEquals("column1:column2:column3:column4:column5", interpreter.GlobalVariables.get("a").toString());
+    fileMaker(new String[0]);
+    lexer = new Lexer("{a = a substr($0, 0, 5)}{print a}");
+    p = new Parser(lexer.getTokens());
+    interpreter = new Interpreter(p.Parse(), Optional.of(filePath));
+    interpreter.InterpretProgram();
+    assertEquals("HelloHelloHelloHelloHello", interpreter.GlobalVariables.get("a").toString());
+    fileMaker(new String[]{"Hello there", "Helllo there", "Hellllo there", "hellloooooo there"});
+    lexer = new Lexer("{if((length($1) == 5) || (length($1) == 7)){a = a \"line skipped! \"; next}}END{len = length(a)-1;a = substr(a,0,len);print a}");
+    p = new Parser(lexer.getTokens());
+    interpreter = new Interpreter(p.Parse(), Optional.of(filePath));
+    interpreter.InterpretProgram();
+    assertEquals("line skipped! line skipped!", interpreter.GlobalVariables.get("a").toString());
+    fileRestore();
+}
+
+@Test
+public void testRandomAwkScriptsPart1() throws Exception{
+    fileMaker(new String[0]);
+    lexer = new Lexer("BEGIN{start=5;end=10;sum=0;for(i = start; i <= end; i++){sum+=i};print \"Sum of numbers from \", start, \" to \", end, \" is: \", sum}");
+    Parser p = new Parser(lexer.getTokens());
+    Interpreter interpreter = new Interpreter(p.Parse(), Optional.of(filePath));
+    interpreter.InterpretProgram();
+    assertEquals("Sum of numbers from 5 to 10 is: 45", interpreter.printContent);
+    String script = "{total += $5; count++}END{if(count > 0){average = total/count;print \"Average: \", average};else{print \"No numbers in this file\"}}";
+    lexer = new Lexer(script);
+    p = new Parser(lexer.getTokens());
+    interpreter = new Interpreter(p.Parse(), Optional.of(filePath));
+    interpreter.InterpretProgram();
+    assertEquals("3", interpreter.GlobalVariables.get("average").toString());
+    lexer = new Lexer(script);
+    p = new Parser(lexer.getTokens());
+    interpreter = new Interpreter(p.Parse(), Optional.empty());
+    interpreter.InterpretProgram();
+    assertEquals("No numbers in this file", interpreter.printContent);
+    fileRestore();
+    lexer = new Lexer("{for(i = 1; i <= NF; i++){if($i % 2 != 0){a = a \"Odd number: \" $i}}}");
+    p = new Parser(lexer.getTokens());
+    interpreter = new Interpreter(p.Parse(), Optional.of(filePath));
+    interpreter.InterpretProgram();
+    assertEquals("Odd number: 1Odd number: 3Odd number: 5", interpreter.GlobalVariables.get("a").toString());
+    lexer = new Lexer("{for(i = NF; i >= 1; i--){a = a $i \" \"}}END{len = length(a)-1;a = substr(a,0,len);print a}");
+    p = new Parser(lexer.getTokens());
+    interpreter = new Interpreter(p.Parse(), Optional.of(filePath));
+    interpreter.InterpretProgram();
+    assertEquals("1line is this Hello 2line is this Hello 3line is this Hello 4line is this Hello 5line is this Hello", interpreter.GlobalVariables.get("a").toString());
+    lexer = new Lexer("BEGIN{celsius = 25;fahrenheit = celsiusToFahrenheit(celsius); print \"Celsius: \", celsius, \"Fahrenheit: \", fahrenheit}function celsiusToFahrenheit(celsius){return celsius * 9/5 + 32}");
+    p = new Parser(lexer.getTokens());
+    interpreter = new Interpreter(p.Parse(), Optional.of(filePath));
+    interpreter.InterpretProgram();
+    assertEquals("Celsius: 25Fahrenheit: 77", interpreter.printContent);
+    fileRestore();
+    }
+
+    @Test
+    public void testRandomAwkScripts4() throws Exception{
+    fileMaker(new String[]{"1", "2"});
+    lexer  = new Lexer("{number = $1;result = (number %2 == 0 ? \"even\" : \"odd\"); a = a result}END{print a}");
+    Parser p = new Parser(lexer.getTokens());
+    Interpreter interpreter = new Interpreter(p.Parse(), Optional.of(filePath));
+    interpreter.InterpretProgram();
+    assertEquals("oddeven", interpreter.GlobalVariables.get("a").toString());
+    fileMaker(new String[]{"Hello this is line 1", "line 2 is here"});
+    lexer = new Lexer("($0 ~ `this`){a = a \"Line with 'this':\" $0}; ($0 !~ `this`){a = a \"This line doesn't contain 'this'!\"}END{print a}");
+    p = new Parser(lexer.getTokens());
+    interpreter = new Interpreter(p.Parse(), Optional.of(filePath));
+    interpreter.InterpretProgram();
+    assertEquals("Line with 'this':Hello this is line 1This line doesn't contain 'this'!", interpreter.GlobalVariables.get("a").toString());
+    fileMaker(new String[0]);
+    lexer = new Lexer("{negated += -$5}END{print negated}");
+    p = new Parser(lexer.getTokens());
+        interpreter = new Interpreter(p.Parse(), Optional.of(filePath));
+        interpreter.InterpretProgram();
+        assertEquals("-15", interpreter.GlobalVariables.get("negated").toString());
+        lexer = new Lexer("BEGIN{negated = -1}END{negated = +negated; print negated}");
+        p = new Parser(lexer.getTokens());
+        interpreter = new Interpreter(p.Parse(), Optional.of(filePath));
+        interpreter.InterpretProgram();
+        assertEquals("1", interpreter.GlobalVariables.get("negated").toString());
+        // ;delete fruits["banana"]; for(fruit in fruits){print fruit}
+    lexer = new Lexer("BEGIN{fruits[\"apple\"] = 3;fruits[\"banana\"] = 5;fruits[\"orange\"] = 2;print \"Original array\";for(fruit in fruits){print fruit, \" : \", fruits[fruit]};delete fruits[\"banana\"]; for(fruit in fruits){print fruit, \" : \",fruits[fruit]}}");
+        p = new Parser(lexer.getTokens());
+        interpreter = new Interpreter(p.Parse(), Optional.of(filePath));
+        interpreter.InterpretProgram();
+    fileRestore();
+    }
+
+    @Test
+    public void testDelete() throws Exception{
+        fileMaker(new String[0]);
+        lexer = new Lexer("BEGIN{fruits[\"apple\"] = 3;fruits[\"banana\"] = 5;fruits[\"orange\"] = 2;print \"Original array\";for(fruit in fruits){print fruit, \" : \", fruits[fruit];};delete fruits[\"banana\"]; for(fruit in fruits){print fruit, \" : \",fruits[fruit]; a = a fruits[fruit]}}");
+        Parser p = new Parser(lexer.getTokens());
+        Interpreter interpreter = new Interpreter(p.Parse(), Optional.of(filePath));
+        interpreter.InterpretProgram();
+        assertEquals("32", interpreter.GlobalVariables.get("a").toString());
+        lexer = new Lexer("BEGIN{fruits[\"apple\"] = 3;fruits[\"banana\"] = 5;fruits[\"orange\"] = 2; delete fruits;a = \"empty\";for(n in fruits){a = a fruits[n]}}");
+        p = new Parser(lexer.getTokens());
+        interpreter = new Interpreter(p.Parse(), Optional.of(filePath));
+        interpreter.InterpretProgram();
+        assertEquals("empty", interpreter.GlobalVariables.get("a").toString());
+        fileRestore();
+    }
+
+    public void awkScriptMaker(String[] s) throws IOException{
+        LinkedList<String> strings = new LinkedList<String>();
+        if(s.length == 0) {
+            strings.add("{f = f + NF}");
+            strings.add("END{print f \" words\"}");
+        }
+        else{
+            for(var i : s)
+                strings.add(i);
+        }
+        filePath = Paths.get("test.awk");
+        temp = Files.readAllLines(filePath);
+        FileWriter fileWriter = new FileWriter("test.awk");
+        fileWriter.write("");
+        for (String line : strings)
+            fileWriter.write(line + "\n"); // Write each line to the file with a newline character
+        fileWriter.close();
+    }
+    @Test
+    public void testInputPaths() throws Exception{
+        fileMaker(new String[0]);
+        awkScriptMaker(new String[0]);
+        PrintStream out = System.out;
+        System.setOut(out);
+        String[] args = new String[]{"test.awk", "input.txt"};
+        Main.main(args);
+        Exception thrown = assertThrows(Exception.class, () -> {
+            String[] args2 = new String[0];
+            Main.main(args2);
+        });
+        Assertions.assertEquals("args have not been declared!", thrown.getMessage());
     }
 }

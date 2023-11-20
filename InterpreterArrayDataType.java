@@ -59,6 +59,15 @@ public class InterpreterArrayDataType extends InterpreterDataType{
         return false;
     }
 
+    public void removeKey(String s){
+    for(String n : storage.keySet()){
+        if(storage.get(n).toString().equals(s.toString())){
+            storage.remove(n);
+            break;
+        }
+    }
+    }
+
     public HashMap<String, InterpreterDataType> getContent(){
         return storage;
     }

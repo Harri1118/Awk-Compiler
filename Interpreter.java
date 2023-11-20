@@ -5,8 +5,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.function.Function;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class Interpreter {
 
@@ -25,6 +23,7 @@ public class Interpreter {
     // LineManager keeps track of the lines in an input file.
     public LineManager Manager;
 
+    private ProgramNode Program;
     // Interpreter Constructor takes in a ProgramNode and FilePath
     public Interpreter(ProgramNode program, Optional<Path> filePath) throws Exception, IOException {
         // if filepath is not empty, LineManager is populated with inputted lines
@@ -47,19 +46,24 @@ public class Interpreter {
         // If the amount of functions in programNode's size is bigger than 0, put the custom functions in.
         if(program.getFuncs().size() > 0)
             putCustomFunctions(program);
+        Program = program;
     }
 
-    // PutBuiltInFunctions is self explanatory, put all the built-in functions inside the Functions hashMap!
+    // PutBuiltInFunctions puts all of awk's built in functions
     private void putBuiltInFunctions() throws Exception{
-        //Goal: print out a hashmap
+        // create function object with hashMap input for each method
         Function<HashMap<String, InterpreterDataType>, String> Function = hashMap -> {
-        // Get "content" from hashMap
-        InterpreterArrayDataType inp = (InterpreterArrayDataType) hashMap.get("content");
-        // printContent takes what will be printed and store it (this is for unit testing purposes)
-        printContent = inp.printValue();
-        // Prints the value
-        System.out.println(inp.printValue());
-        // Return nothing??
+        // fin is to be printed as the final product
+        String fin = "";
+        // Retrieve content from input
+        InterpreterArrayDataType content = (InterpreterArrayDataType) hashMap.get("content");
+        // add all strings from content keySet. Add it to fin
+            for(String s : content.getContent().keySet())
+                fin += content.get(s);
+            // printContent set to fin for UnitTesting purposes
+            printContent = fin;
+            // Print fin, return nothing
+            System.out.println(fin);
         return "";
         };
         // Initialize and add print
@@ -69,17 +73,41 @@ public class Interpreter {
         // Function for printf
         Function = hashMap -> {
             // Get "content" from hashMap
-            InterpreterArrayDataType inp = (InterpreterArrayDataType) hashMap.get("content");
-            // if format key is contained within, utilize it
-            if(hashMap.containsKey("format")) {
-                printContent = "Format: " + hashMap.get("format").toString() + ", Result: " + inp.printValue();
-                System.out.println(printContent);
+            InterpreterArrayDataType content = (InterpreterArrayDataType) hashMap.get("content");
+            // fin is the final string product which this method will print out
+            String fin = "";
+            // Format extracted from hashmap
+            String format = hashMap.get("format").toString();
+            // formats so split up format so that each individual format instance is taken care of
+            String[] formats = format.split("%");
+            // i initialized to iterate through format conversion
+            int i = 2;
+            // Check if there are more than two fields in the format
+            if(formats.length > 2){
+                // Iterate through formats in order to account for all format instances
+                for(int n = 0; n < formats.length; n++){
+                    // add first of list no matter what (in every single case there is no format instance)
+                    if(n == 0)
+                        fin += formats[0];
+                    // Else, account for each format field
+                    else{
+                        // innerFormat extracts the format in which is to be implemented
+                        String innerFormat = "%" + formats[n];
+                        // convertToFormat called, automatically returns the input from content formatted with format instance
+                        fin += convertToFormat(innerFormat, content.getContent().get(String.valueOf(i)).toString());
+                        // i is added to increment to next field
+                        i++;
+                    }
+                }
+                // print out fin, return nothing
+                System.out.println(fin);
                 return "";
             }
-            // printcontent is simplified for debugging purposes
-            printContent = "Format: " + GlobalVariables.get("OFMT").toString() + ", Result: " + inp.printValue();
-            // Print result
-            System.out.println(printContent);
+            // If only one field, Increment through the content keyset
+            for(String s : content.getContent().keySet())
+                fin += content.get(s);
+            // print formatted fin, return nothing
+            System.out.printf(format, fin);
             return "";
         };
         // printf initialized and added
@@ -122,15 +150,15 @@ public class Interpreter {
             if(hashMap.isEmpty() || hashMap.size() > 3)
                 throw new IllegalArgumentException("Invalid method call for gsub! must be in the form: gsub(regex, replacement, Optional[array])!");
             // Check if contains target
-            if(hashMap.containsKey("target")){
+            if(hashMap.containsKey("targetToChange")){
                 // whole is what the target will look like as a string
-                String whole = hashMap.get("target").toString();
+                String whole = hashMap.get("targetToChange").toString();
                 // replace all the targets with replacement in modded
                 String modded = whole.replace(hashMap.get("regexp").toString(), hashMap.get("replacement").toString());
                 // if no changes were made, return 0, elsewise return 1 and modify target
                 if(whole.equals(modded))
                     return "0";
-                hashMap.put("target", new InterpreterDataType(modded));
+                hashMap.put("targetToChange", new InterpreterDataType(modded));
                 return "1";
             }
             // If no target, do something simipar but instead replace the fields/
@@ -147,7 +175,7 @@ public class Interpreter {
             }
             return "1";
         };
-        node = new BuiltInFunctionDefinitionNode("gsub", new String[]{"regexp", "replacement", "target"}, false, Function);
+        node = new BuiltInFunctionDefinitionNode("gsub", new String[]{"regexp", "replacement", "targetToChange"}, false, Function);
         Functions.put("gsub", node);
 
         // function for index
@@ -194,15 +222,42 @@ public class Interpreter {
 
         // function for sprintf
         Function = hashMap -> {
-            // if more than 2 arguments, throw an exception
-            if(hashMap.size() > 2 || !hashMap.containsKey("format") || !hashMap.containsKey("content"))
-                throw new IllegalArgumentException("Error! Method to format string is incorrect! Must be in form sprintf(format, string)!");
-            // Get content
+            // Get "content" from hashMap
             InterpreterArrayDataType content = (InterpreterArrayDataType) hashMap.get("content");
-            // return content formatted
-            return "Format: " + hashMap.get("format").toString() + ", content: " + content.printValue();
+            // fin is the final string product which this method will print out
+            String fin = "";
+            // Format extracted from hashmap
+            String format = hashMap.get("format").toString();
+            // formats so split up format so that each individual format instance is taken care of
+            String[] formats = format.split("%");
+            // i initialized to iterate through format conversion
+            int i = 2;
+            // Check if there are more than two fields in the format
+            if(formats.length > 2){
+                // Iterate through formats in order to account for all format instances
+                for(int n = 0; n < formats.length; n++){
+                    // add first of list no matter what (in every single case there is no format instance)
+                    if(n == 0)
+                        fin += formats[0];
+                        // Else, account for each format field
+                    else{
+                        // innerFormat extracts the format in which is to be implemented
+                        String innerFormat = "%" + formats[n];
+                        // convertToFormat called, automatically returns the input from content formatted with format instance
+                        fin += convertToFormat(innerFormat, content.getContent().get(String.valueOf(i)).toString());
+                        // i is added to increment to next field
+                        i++;
+                    }
+                }
+                // Return fin
+                return fin;
+            }
+            // If only one field, Increment through the content keyset
+            for(String s : content.getContent().keySet())
+                fin += content.get(s);
+            return fin;
         };
-        node = new BuiltInFunctionDefinitionNode("index", new String[]{"format", "content"}, false, Function);
+        node = new BuiltInFunctionDefinitionNode("sprintf", new String[]{"format", "content"}, true, Function);
         Functions.put("sprintf", node);
 
         // method for sub
@@ -211,21 +266,21 @@ public class Interpreter {
             if(hashMap.isEmpty() || hashMap.size() > 3)
                 throw new IllegalArgumentException("Invalid method call for sub! must be in the form: sub(regex, replacement, Optional[array])!");
             // if target is contained
-            if(hashMap.containsKey("target")){
+            if(hashMap.containsKey("targetToChange")){
                 // replace the first string
-                String whole = hashMap.get("target").toString();
-                String modded = whole.replaceFirst(hashMap.get("regexp").toString(), hashMap.get("replacement").toString());
+                String whole = hashMap.get("targetToChange").toString();
+                String modded = whole.replaceFirst(hashMap.get("pattern").toString(), hashMap.get("replacement").toString());
                 // if no diff then return 0
                 if(whole.equals(modded))
                     return "0";
                 // modify target and return
-                hashMap.put("target", new InterpreterDataType(modded));
+                hashMap.put("targetToChange", new InterpreterDataType(modded));
                 return "1";
             }
             // get whole
             String whole = GlobalVariables.get("$0").toString();
             // Get modded from replacefirst of whole
-            String modded = whole.replaceFirst(hashMap.get("regexp").toString(), hashMap.get("replacement").toString());
+            String modded = whole.replaceFirst(hashMap.get("pattern").toString(), hashMap.get("replacement").toString());
             // return 0 if no diff
             if(whole.equals(modded))
                 return "0";
@@ -238,7 +293,7 @@ public class Interpreter {
                 // Get part
                 String part = GlobalVariables.get("$" + i).toString();
                 // Create modified
-                String modified = part.replaceFirst(hashMap.get("regexp").toString(), hashMap.get("replacement").toString());
+                String modified = part.replaceFirst(hashMap.get("pattern").toString(), hashMap.get("replacement").toString());
                 // use put if difference
                 if(!part.equals(modified)){
                     GlobalVariables.put("$"+i, new InterpreterDataType(modified));
@@ -248,16 +303,17 @@ public class Interpreter {
             }
             return "0";
         };
-        node = new BuiltInFunctionDefinitionNode("sub", new String[]{"regexp", "replacement", "target"}, true, Function);
+        node = new BuiltInFunctionDefinitionNode("sub", new String[]{"pattern", "replacement", "targetToChange"}, false, Function);
         Functions.put("sub", node);
 
         // Function for match
         Function = hashMap -> {
+            //HashMap<String, InterpreterDataType> content = hashMap.get("content");
             // Argument checking
             if(hashMap.isEmpty() || hashMap.size() > 2)
                 throw new IllegalArgumentException("Illegal match declaration! The match method must be in the form: match(string, pattern)!");
             // Check for string and pattern
-            String content = hashMap.get("string").toString();
+            String content = hashMap.get("content").toString();
             String pattern = hashMap.get("pattern").toString();
             // if no pattern, return 0
             if(!content.contains(pattern))
@@ -280,7 +336,7 @@ public class Interpreter {
             fin++;
             return String.valueOf(fin);
         };
-        node = new BuiltInFunctionDefinitionNode("match", new String[]{"string", "pattern"}, true, Function);
+        node = new BuiltInFunctionDefinitionNode("match", new String[]{"content", "pattern"}, false, Function);
         Functions.put("match", node);
 
         //Function for split
@@ -301,10 +357,10 @@ public class Interpreter {
             InterpreterArrayDataType finArray = new InterpreterArrayDataType();
             for(var c : arr)
                 finArray.put(c);
-            hashMap.put("array", finArray);
+            hashMap.put("arrayToPost", finArray);
             return String.valueOf(arr.length);
         };
-        node = new BuiltInFunctionDefinitionNode("split", new String[]{"target", "array", "separator"}, true, Function);
+        node = new BuiltInFunctionDefinitionNode("split", new String[]{"target", "arrayToPost", "separator"}, false, Function);
         Functions.put("split", node);
 
         // function for substr method
@@ -316,44 +372,247 @@ public class Interpreter {
             try {
                 int start = Integer.valueOf(hashMap.get("start").toString());
                 int end = Integer.valueOf(hashMap.get("end").toString());
-                String str = hashMap.get("string").toString().substring(start, end);
+                String str = hashMap.get("content").toString().substring(start, end);
                 return str;
             }
             catch(Exception e){
                 throw new IllegalArgumentException("Warning! Substring is configured incorrectly!");
             }
         };
-        node = new BuiltInFunctionDefinitionNode("substr", new String[]{"string", "start", "end"}, true, Function);
+        node = new BuiltInFunctionDefinitionNode("substr", new String[]{"content", "start", "end"}, false, Function);
         Functions.put("substr", node);
 
         // Function for toLower
         Function = hashMap -> {
             if(hashMap.isEmpty() || hashMap.size() > 1)
                 throw new IllegalArgumentException("Error! tolower must have 1 parameter!");
-            return hashMap.get("string").toString().toLowerCase();
+            return hashMap.get("content").toString().toLowerCase();
         };
-        node = new BuiltInFunctionDefinitionNode("tolower", new String[]{"content"}, true, Function);
+        node = new BuiltInFunctionDefinitionNode("tolower", new String[]{"content"}, false, Function);
         Functions.put("tolower", node);
 
         // Function for toUpper
         Function = hashMap -> {
             if(hashMap.isEmpty() || hashMap.size() > 1)
                 throw new IllegalArgumentException("Error! toupper must have 1 parameter!");
-            return hashMap.get("string").toString().toUpperCase();
+            return hashMap.get("content").toString().toUpperCase();
         };
-        node = new BuiltInFunctionDefinitionNode("toupper", new String[]{"content"}, true, Function);
+        node = new BuiltInFunctionDefinitionNode("toupper", new String[]{"content"}, false, Function);
         Functions.put("toupper", node);
     }
 
+    // Checks if input is a String format
+    private boolean isAStringFormat(char s){
+        // Check if s is s, d, f, or c for a string format. Return false if no cases are true
+        switch(s){
+            case 's':
+                return true;
+            case 'd':
+                return true;
+            case 'f':
+                return true;
+            case 'c':
+                return true;
+        }
+        return false;
+    }
+
+    // method built to format individual fields in a string format for printf and sprintf
+    public String convertToFormat(String formatType, String content){
+        // i initialized to 1 to iterate through formatType
+        int i = 1;
+        // s is gathered from formatType
+        char s = formatType.charAt(i);
+        // check while isAStringFormat(s) is false
+        while(isAStringFormat(s) == false){
+            // add 1 to i
+            i++;
+            // set s to next char
+            s = formatType.charAt(i);
+        }
+        // After iterating is done, then set s to the char
+        s = formatType.charAt(i);
+        try {
+            // if s is 's', then format it accordingly
+            if (s == 's')
+                return String.format(formatType, content);
+            // else if s is 'd', then format it to integer and return
+            else if (s == 'd') {
+                int intg = Integer.parseInt(content);
+                return String.format(formatType, intg);
+            }
+            // else if s is 'f', then format it to double and return
+            else if (s == 'f') {
+                double dubl = Double.parseDouble(content);
+                return String.format(formatType, dubl);
+            }
+            // else if 'c', then format it to char and return
+            else if (s == 'c') {
+                if (content.length() > 1)
+                    throw new Exception("");
+                char c = content.charAt(0);
+                return String.format(formatType, c);
+            }
+            // in any other case, convert content to int and format it
+            else{
+                int it = Integer.valueOf(i);
+                return String.format(formatType, it);
+            }
+        }
+        catch(Exception e){
+            // Return formatType and content otherwise
+        return formatType + content;}
+    }
     // Method to put in custon functions. A simple for loop.
     private void putCustomFunctions(ProgramNode p){
         for(var f: p.getFuncs())
             Functions.put(f.getName(), f);
     }
 
+    // InterpretProgram is the method which initiates interpreter
+    public void InterpretProgram() throws Exception{
+        // Interpret begin blocks first
+        for(BlockNode b : Program.getBegin())
+            InterpretBlock(b);
+        // While the Manager still has more stringMembers, SplitAndAssign and interpret blocknodes from programnode's other list
+        while(!Manager.stringMembers.isEmpty()){
+            Manager.SplitAndAssign();
+            for(BlockNode b: Program.getOther())
+                InterpretBlock(b);
+        }
+        // Interpret end blocks afterwards
+        for(BlockNode b : Program.getEnd())
+            InterpretBlock(b);
+    }
+
+    // InterpretBlock iterates and interprets blocks
+    public void InterpretBlock(BlockNode b) throws Exception{
+        // if a condition is present, GetIDT to check if its true or not
+        if(b.getCondition().isPresent()){
+            InterpreterDataType result = GetIDT(b.getCondition().get(), null);
+            if(isConvertable(result) == true)
+                InterpretedListOfStatements(null, b.getStatements());
+        }
+        // Else, run the block if it has no condition
+        else
+            InterpretedListOfStatements(null, b.getStatements());
+    }
+
     // runFuncCall to interpret functions
-    public  String RunFunctionCall(){
-        return "Function call ran.";
+    public  String RunFunctionCall(HashMap<String, InterpreterDataType> locals, FunctionCallNode func) throws Exception {
+        if(Objects.isNull(locals))
+            locals = GlobalVariables;
+        // If the ProgramNode's functions doesn't contain the key, throw an exception
+        if(!Functions.containsKey(func.getName()))
+            throw new Exception("Error! The function \"" + func.toString() + "\" doesn't exist!");
+        // Create get FunctionDefinitionNode from inputted func name
+        FunctionDefinitionNode function = Functions.get(func.getName());
+        String targetName = "";
+        String arrayToPost = "";
+        // If the FunctionCallNode's length is not equal to the BuiltIn's size and the function isn't variadic, throw an exception
+        if(function.getParameters().length < func.getParameters().size() && !function.isVariadic())
+            throw new Exception("Invalid method call! Parameters don't match the parameter count!");
+        // Create a params hashmap, this si to be inputted into the BuiltInFunctionDefinitionNode
+        HashMap<String, InterpreterDataType> params = new HashMap<String, InterpreterDataType>();
+        // i is set to 1 to iterate through hashmap
+        int i = 0;
+        if(func.getName().equals("printf") || func.getName().equals("sprintf"))
+            i++;
+        // Handle BuiltInFunctionDef node and variadic cases
+        if(function instanceof BuiltInFunctionDefinitionNode && function.isVariadic() == true){
+            // Get the builtInFuncDef
+        BuiltInFunctionDefinitionNode pFunc = (BuiltInFunctionDefinitionNode) Functions.get(func.getName());
+        // Create an IDAT which will be created to input into the variadic functions
+        InterpreterArrayDataType paramContent = new InterpreterArrayDataType();
+
+        // If the function is printf or sprintf, then put the first param 'format' into the hashmap
+        if(pFunc.getName().equals("printf") || pFunc.getName().equals("sprintf"))
+            params.put("format", GetIDT(func.getParameters().get(0), null));
+        // Retrieve each node from parametwers
+        for(Node n : func.parameters){
+            // If printf or sprintf, and the param doesn't equal the format, put the node in the param
+            if(!n.toString().equals(func.parameters.get(0).toString()) && (pFunc.getName().equals("printf") || pFunc.getName().equals("sprintf")))
+                paramContent.getContent().put(String.valueOf(i), GetIDT(n, locals));
+            // If it's just a print, put it in regardless
+            else if(pFunc.getName().equals("print"))
+                paramContent.getContent().put(String.valueOf(i), GetIDT(n, locals));
+            // Add 1 to i to iterate over
+            i++;
+        }
+        // put the IDAT with key content in the parameter
+        params.put("content", paramContent);
+        // Execute and return the result
+        String fin = pFunc.Execute(params);
+        return fin;
+        }
+        if(func.getParameters().size() != 0) {
+            // For all other cases, get param from the function parameters
+            for (String param : function.getParameters()) {
+                // if i is equal to funcsize, then break
+                if(i == func.getParameters().size())
+                    break;
+                // if param is a pattern, make a value and create a new IDT for it
+                if(param.equals("pattern")) {
+                    String value = func.getParameters().get(i).toString();
+                    params.put(param, new InterpreterDataType(value));
+                }
+                // if param is targetToChange, get variablename and set it to targetname
+                else if(param.equals("targetToChange")){
+                    VariableReferenceNode var = (VariableReferenceNode) func.getParameters().get(i);
+                    targetName = var.getName();
+                    params.put("targetToChange", GetIDT(func.getParameters().get(i), locals));
+                }
+                // if param is arrayToPost, set array target name to arrayToPost
+                else if(param.equals("arrayToPost")){
+                    VariableReferenceNode var = (VariableReferenceNode) func.getParameters().get(i);
+                    arrayToPost = var.getName();
+                    params.put("arrayToPost", new InterpreterArrayDataType());
+                }
+                // if param is a variable, check if its an instance of variablereferencenode and throw an error if not true
+                else if(param.equals("variable")){
+                    if(!(func.getParameters().get(i) instanceof VariableReferenceNode))
+                        throw new Exception("Error! Cannot use a non-variable for getline! Must be in the form of \"getline var\"");
+                    params.put(param, GetIDT(func.getParameters().get(i), locals));
+                }
+                // put param in otherwise
+                else
+                    params.put(param, GetIDT(func.getParameters().get(i), locals));
+                // add 1 to i
+                i++;
+            }
+        }
+        // returned is the final product
+        ReturnType returned = new ReturnType(ReturnType.TypeOfReturn.NORMAL);
+        // fin is empty in cases of NORMAL. Will change for return cases
+        String fin = "";
+        // If function is BuiltIn
+        if(function instanceof BuiltInFunctionDefinitionNode) {
+            // Get builtInFunction from function
+            BuiltInFunctionDefinitionNode Bfunction = (BuiltInFunctionDefinitionNode) function;
+            // fin is equal to the product of Bfunction
+            fin = Bfunction.Execute(params);
+        }
+        // else, InterpretList of statements returned from the custom function
+        else
+            returned = InterpretedListOfStatements(params, function.getStatements());
+        // If return, fin is set to the product of the return obj
+        if(returned.getReturnType() == ReturnType.TypeOfReturn.RETURN)
+            fin = returned.toString();
+        // If TargetToChance is contained in params, put variable name in params and execute method
+        if(params.containsKey("targetToChange"))
+            locals.put(targetName, new InterpreterDataType(params.get("targetToChange").toString()));
+        // If params contains ArraytoPost, create a new array and put it in params
+        if(params.containsKey("arrayToPost")){
+            InterpreterArrayDataType idat = (InterpreterArrayDataType) params.get("arrayToPost");
+            InterpreterArrayDataType finalArray = new InterpreterArrayDataType();
+            for(String n : idat.getContent().keySet()){
+                locals.put(arrayToPost + "[" + n + "]", idat.get(n));
+                finalArray.put(n);
+            }
+            locals.put(arrayToPost, finalArray);
+        }
+        // return fin
+        return fin;
     }
 
     // GetIDT to interpret calculations
@@ -369,6 +628,8 @@ public class Interpreter {
         if(ASNode instanceof AssignmentNode) {
             // AssignmentNode is cased to be used.
             AssignmentNode aNode = (AssignmentNode) ASNode;
+            if(!(aNode.getTarget() instanceof VariableReferenceNode) && (aNode.Expression.isPostIncremental() || aNode.Expression.isPreIncremental()))
+                throw new Exception("Error! Cannot pre-increment to any other value except a VariableReferenceNode! Ex: ++var, --var");
             // derive target from AssignmentNode
             VariableReferenceNode Target = (VariableReferenceNode) aNode.getTarget();
             // Derive var name from target
@@ -388,12 +649,12 @@ public class Interpreter {
             // If Target is part of an array and the array is already initialized, add it to the existing array and put it as a Variable into Variables
             if(Target.isArray() && Variables.containsKey(Target.getName())){
                 arr = (InterpreterArrayDataType) Variables.get(Target.getName());
-                arr.putKey(Target.getIndex());
+                arr.put(Target.getIndex());
             }
             // If first time initializing the array, then create it and set it in Variables, add its first variable, and return the value
             else if(Target.isArray() && !(Variables.containsKey(Target.getName()))) {
                 arr = new InterpreterArrayDataType();
-                arr.putKey(Target.getIndex());
+                arr.put(Target.getIndex());
                 Variables.put(Target.getName(), arr);
             }
             return val;
@@ -422,7 +683,7 @@ public class Interpreter {
             if(!Functions.containsKey(func.getName()))
                 throw new Exception("Error! Function doesn't exist!");
             // call RunFunctionCall() if its a valid function
-            return new InterpreterDataType(RunFunctionCall());
+            return new InterpreterDataType(RunFunctionCall(Variables, func));
         }
         return PatternNode(FCallNode, Variables);
     }
@@ -465,9 +726,29 @@ public class Interpreter {
                 Variables = GlobalVariables;
             // cast VariableReferenceNode
             VariableReferenceNode var = (VariableReferenceNode) VNode;
+            if(((VariableReferenceNode) VNode).hasValue()){
+                InterpreterDataType fin = Variables.get(var.getName() + "[\"" + Variables.get(var.getIndex().toString()) + "\"]");
+                if(Objects.isNull(fin)) {
+                    fin = Variables.get(var.getName() + "[" + Variables.get(var.getIndex().toString()) + "]");
+                    if(Objects.isNull(fin)){
+                        fin = Variables.get(var.getName() + "[\"" + var.getIndex().toString() + "\"]");
+                        if(Objects.isNull(fin))
+                            fin = Variables.get(var.getName() + "[" + var.getIndex().toString() + "]");
+                    }
+                }
+                if(Objects.isNull(fin))
+                    return new InterpreterDataType("");
+                return fin;
+            }
             // Check if Variable is contained in Variables. If not then return 0
             if(!Variables.containsKey(var.toString()) || Variables.get(var.toString()).isEmpty())
                 return new InterpreterDataType("");
+
+            if(Variables.containsKey(var.toString())){
+                if(Variables.get(var.toString()) instanceof InterpreterArrayDataType){
+                    return new InterpreterDataType();
+                }
+                return new InterpreterDataType(Variables.get(var.toString()).toString());}
             // If variable is not an array return its val
             else if(!var.isArray())
                 return Variables.get(var.toString());
@@ -498,7 +779,7 @@ public class Interpreter {
             return BooleanOperator(Left, null, operationNode.getOperation());
         // Check if operation is DOLLAR, then return GetField with appropriate Variables
         if(operationNode.getOperation() == OperationNode.PossibleOperations.DOLLAR)
-            return getField(Left,null,  Variables);
+            return getField(Left,  Variables);
         // Check if operation is MATCH or NOTMATCH, then return Match with appropriate Variables
         if (operationNode.getOperation() == OperationNode.PossibleOperations.MATCH || operationNode.getOperation() == OperationNode.PossibleOperations.NOTMATCH)
             return Match(Left, operationNode.getRightValue().get(), operationNode.getOperation());
@@ -506,7 +787,7 @@ public class Interpreter {
         if (operationNode.getOperation() == OperationNode.PossibleOperations.UNARYPOS || operationNode.getOperation() == OperationNode.PossibleOperations.UNARYNEG)
             return Unary(Left, operationNode.getOperation());
         // If all these ifs fail, interpret the right value.
-        InterpreterDataType Right = GetIDT(operationNode.getRightValue().get(), null);
+        InterpreterDataType Right = GetIDT(operationNode.getRightValue().get(), Variables);
         // Check if operation is mathematic in nature, then return BasicMath with appropriate Variables
         if (operationNode.isMathematic())
             return BasicMath(Left, Right, operationNode.getOperation());
@@ -577,10 +858,13 @@ public class Interpreter {
     public InterpreterDataType Unary(InterpreterDataType Left, OperationNode.PossibleOperations op){
         // Tnum converted to float
         float num = conv(Left.toString());
-        // if op is unaryneg, negate it and return it. Elsewise return the result.
+        // if op is unaryneg, negate it and return it. if it is negative and the operator is unarypos, negate it to make it positive. Elsewise return the result.
         if(op == OperationNode.PossibleOperations.UNARYNEG){
             num *= -1;
             return new InterpreterDataType(String.valueOf(num));}
+        else if(op == OperationNode.PossibleOperations.UNARYPOS && num < 0){
+            num *= -1;
+        }
         return new InterpreterDataType(String.valueOf(num));
     }
     public InterpreterDataType Compares(InterpreterDataType Left, InterpreterDataType Right, OperationNode.PossibleOperations op) throws Exception {
@@ -739,17 +1023,15 @@ public class Interpreter {
             throw new Exception("Error! Cannot match with a non-pattern type! Ex: expr ~|!~ PATTERN");
         // Regex gets value of right
         String regex = Right.toString();
-        // Check for patterns with Pattern and Matcher Objects from java
-        Pattern pattern = Pattern.compile(regex);
-        Matcher matcher = pattern.matcher(expr);
+        boolean fin = expr.contains(regex);
         // If op is NOTMATCH, return 1 if it cannot find it, return 0 otherwise.
         if(op == OperationNode.PossibleOperations.NOTMATCH){
-            if(!matcher.find())
+            if(!fin)
                 return new InterpreterDataType("1");
             return new InterpreterDataType("0");
         }
         // Otherwise, return 1 if found, return 0 otherwise.
-        if (matcher.find())
+        if (fin)
             return new InterpreterDataType("1");
         return new InterpreterDataType("0");
 
@@ -768,17 +1050,22 @@ public class Interpreter {
         }
         // Get Array from Variables if it exists
         InterpreterArrayDataType array = (InterpreterArrayDataType) Variables.get(arr.getName());
+        LinkedList<String> values = new LinkedList<String>();
+        for(String f : array.getContent().keySet())
+            values.add(array.getContent().get(f).toString());
         // Check if it contains the name, return 1 if so and 0 if not.
-        if(array.containsKey(Name))
+        if(values.contains(Name))
             return new InterpreterDataType("1");
         return new InterpreterDataType("0");
     }
 
-    private InterpreterDataType getField(InterpreterDataType left, InterpreterDataType Right, HashMap<String, InterpreterDataType> Variables) throws Exception{
+    private InterpreterDataType getField(InterpreterDataType left, HashMap<String, InterpreterDataType> Variables) throws Exception{
         // Check if variables is null
         // If so, equal it to GlobalVaribales
-        if(Objects.isNull(Variables))
+        if(Objects.isNull(Variables) || Variables.isEmpty())
             Variables = GlobalVariables;
+        if(!Variables.containsKey("$" + left.toString()))
+            return new InterpreterDataType("");
         return Variables.get("$"+left.toString());
     }
 
@@ -790,8 +1077,6 @@ public class Interpreter {
         else if(s instanceof ForEachNode)
             return true;
         else if(s instanceof DoWhileNode)
-            return true;
-        else if(s instanceof IfNode)
             return true;
         else if(s instanceof WhileNode)
             return true;
@@ -826,6 +1111,8 @@ public class Interpreter {
         ReturnType fin = ProcessBreakNode(locals, stmt);
         // Check if BreakNode returns null
         if(Objects.isNull(fin)){
+            if(stmt instanceof ReturnNode)
+                return new ReturnType(ReturnType.TypeOfReturn.RETURN, GetIDT(stmt, locals).toString());
             // GetIDT and process whatever the statement is. Then return normal
             GetIDT(stmt, locals);
             return new ReturnType(ReturnType.TypeOfReturn.NORMAL);
@@ -869,7 +1156,8 @@ public class Interpreter {
             // else, get the array, and delete the variable from locals and its reference in its IDAT
             else{
                 InterpreterArrayDataType arr = (InterpreterArrayDataType) locals.get(var.getName());
-                arr.getContent().remove(var.getIndex());
+                String s = var.getIndex();
+                arr.removeKey(var.getIndex());
                 locals.remove(var.toString());
             }
             return new ReturnType(ReturnType.TypeOfReturn.NORMAL);
@@ -893,6 +1181,7 @@ public class Interpreter {
     public ReturnType ProcessDoWhileNode(HashMap<String, InterpreterDataType> locals, StatementNode stmt) throws Exception {
         if(stmt instanceof DoWhileNode){
             DoWhileNode doWhile = (DoWhileNode) stmt;
+            String s = "";
             // emulate the do-while loop. The condition depends of the doWhile objects' .getCondition()
             // returned from GetIDT
             do {
@@ -901,8 +1190,9 @@ public class Interpreter {
                 // If fin doesn't return normal, return it
                 if(fin.getReturnType() != ReturnType.TypeOfReturn.NORMAL)
                     return fin;
+                s = GetIDT(doWhile.getCondition(), locals).toString();
             }
-            while(GetIDT(doWhile.getCondition(), locals).toString().equals("1"));
+            while(s.equals("1"));
             // Return normal otherwise
             return new ReturnType(ReturnType.TypeOfReturn.NORMAL);
         }
@@ -959,16 +1249,20 @@ public class Interpreter {
                 arr = (InterpreterArrayDataType) locals.get(rightValue.getName());
             // Emulate java's forEach
             for(String f : arr.getContent().keySet()){
+            String name = arr.getContent().get(f).toString();
             // Get value of f from array and set it to f
-            locals.put(leftValue.getName(), locals.get(rightValue.getName()+"[\"" + f + "\"]"));
+            //locals.put(leftValue.getName(), locals.get(rightValue.getName()+"[\"" + arr.getContent().get(f).toString() + "\"]"));
+            locals.put(leftValue.getName(), new InterpreterDataType(name));
+            if(Objects.isNull(locals.get(leftValue.getName())))
+                locals.put(leftValue.getName(), locals.get(rightValue.getName()+"[" + arr.getContent().get(f).toString() + "]"));
             // Get returnType from InterpretedListOfStatements
             ReturnType fin = InterpretedListOfStatements(locals, forEachNode.getBlock().getStatements());
             // If not normal, return it
             if(fin.getReturnType() != ReturnType.TypeOfReturn.NORMAL)
                 return fin;
             // Otherwise, if it is still contained as a local, set the value of f to it
-            if(locals.containsKey(rightValue.getName()+"[\"" + f + "\"]"))
-                locals.put(rightValue.getName()+"[\"" + f + "\"]", locals.get(leftValue.getName()));
+            //if(locals.containsKey(rightValue.getName()+"[\"" + f + "\"]"))
+              //  locals.put(rightValue.getName()+"[\"" + f + "\"]", locals.get(leftValue.getName()));
             }
             // Return normal otherwise
             return new ReturnType(ReturnType.TypeOfReturn.NORMAL);
@@ -1028,6 +1322,8 @@ public class Interpreter {
             while(GetIDT(whileNode.getCondition(), locals).toString().equals("1")){
                 // Returned checks to see if InterpretedListOfStatements doesn't return NORMAL
                 ReturnType returned = InterpretedListOfStatements(locals, whileNode.getBlock().getStatements());
+                if(returned.getReturnType() == ReturnType.TypeOfReturn.CONTINUE)
+                    continue;
                 // If nor normal, return returned.
                 if(returned.getReturnType() != ReturnType.TypeOfReturn.NORMAL)
                     return returned;
@@ -1035,6 +1331,11 @@ public class Interpreter {
             return new ReturnType(ReturnType.TypeOfReturn.NORMAL);
         }
         return null;
+    }
+
+
+    public ProgramNode getProgram(){
+        return Program;
     }
     public class LineManager{
         private LinkedList<String> stringMembers;
@@ -1064,19 +1365,23 @@ public class Interpreter {
             return true;
         }
         public void SplitAndAssign(String s){
-            //set ln to nr
+            //set ln to nr, increment ln
             int ln = Integer.valueOf(GlobalVariables.get("NR").toString());
             ln++;
+            // set FNR and NR glovals to ln
             GlobalVariables.put("FNR", new InterpreterDataType(String.valueOf(ln)));
             GlobalVariables.put("NR", new InterpreterDataType(String.valueOf(ln)));
-            // Returns a peek
+            // Returns a peek if s equals $0
             if(s.equals("$0"))
                 GlobalVariables.put("$0", new InterpreterDataType(stringMembers.pop()));
+            // else, put peek into globals and increment nextDifference
             else{
                 GlobalVariables.put(s, new InterpreterDataType(stringMembers.peek()));
                 nextDifference++;
             }
         }
+
+        // resets all fields
         public void reset(){
             int size = Integer.valueOf(GlobalVariables.get("NF").toString());
             for(int i = 0; i < size; i++)

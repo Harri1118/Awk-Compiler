@@ -31,10 +31,4 @@ public class AssignmentNode extends StatementNode{
     public Node getTarget(){
         return Target;
     }
-
-    public boolean isPost(){
-        if(Expression.getOperation() == OperationNode.PossibleOperations.POSTDEC || Expression.getOperation() == OperationNode.PossibleOperations.POSTINC)
-            return true;
-        return false;
-    }
 }

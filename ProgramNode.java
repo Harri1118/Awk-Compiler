@@ -7,7 +7,7 @@ public class ProgramNode {
    private LinkedList<BlockNode> END = new LinkedList<BlockNode>();
    private LinkedList<FunctionDefinitionNode> functions = new LinkedList<FunctionDefinitionNode>();
 
-   public LinkedList<BlockNode> OTHER = new LinkedList<BlockNode>();
+   private LinkedList<BlockNode> OTHER = new LinkedList<BlockNode>();
 
    public void addBegin(BlockNode b) throws Exception{
       if(!functions.isEmpty())
@@ -45,7 +45,6 @@ public class ProgramNode {
          return "toString not valid";
       }
    }
-
    public LinkedList<FunctionDefinitionNode> getFuncs(){
       return functions;
    }
@@ -54,4 +53,15 @@ public class ProgramNode {
       return s.substring(1,s.length()-1);
    }
 
+   public LinkedList<BlockNode> getBegin(){
+      return BEGIN;
+   }
+
+   public LinkedList<BlockNode> getEnd(){
+      return END;
+   }
+
+   public LinkedList<BlockNode> getOther(){
+      return OTHER;
+   }
 }

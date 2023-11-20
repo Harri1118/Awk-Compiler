@@ -33,6 +33,18 @@ public String printParams(){
     return f;
 }
 
+public String[] getParameters(){
+    return parameters;
+}
+
+    public boolean isVariadic(){
+        return false;
+    }
+
+    public LinkedList<StatementNode> getStatements(){
+    return statements;
+    }
+
 public String getName(){
     return name;
 }

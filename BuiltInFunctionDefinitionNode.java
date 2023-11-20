@@ -18,6 +18,7 @@ public class BuiltInFunctionDefinitionNode extends FunctionDefinitionNode{
         return function.apply(input);
     }
 
+    @Override
     public boolean isVariadic(){
         return Variadic;
     }

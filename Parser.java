@@ -466,7 +466,9 @@ public class Parser {
 
             return Optional.of(new FunctionCallNode(functionName, Condition));
         }
-        // Check if functionName is any of the other methods (print, printf, getline)
+        else if(functionName.equals("getline"))
+            return Optional.of(new FunctionCallNode(functionName));
+            // Check if functionName is any of the other methods (print, printf, getline)
         else {
             LinkedList<Node> Params = new LinkedList<Node>();
             // firstCondition initiated to check for errors in param types of method calls
@@ -480,16 +482,10 @@ public class Parser {
                 // If functionName is printf and the first condition isn't a stringliteral, throw an exception
                 if (functionName.equals("printf") && !(Condition.get() instanceof ConstantNode) && firstCondition == true)
                     throw new Exception("First parameter must be of a format type! Ex: printf \"Name: %s, Age: %d\\n\", name, age");
-                // If functionName is getline and first condition isn't a VariableReferenceNode, throw an exception
-                if (functionName.equals("getline") && !(Condition.get() instanceof VariableReferenceNode) && firstCondition == true)
-                    throw new Exception("First parameter of getline must be a variable! Ex: getline [var] Optional[filepath]");
                 // firstCondition remains false after the first loop
                 firstCondition = false;
                 // Add condition to params list
                 Params.add(Condition.get());
-                // if functionName is getline and there are more than two conditions, throw an exception
-                if (functionName.equals("getline") && Params.size() > 1)
-                    throw new Exception("getline with filepaths isn't supported!");
                 // MatchAndRemove comma. If empty then break. try/catch statement for testing purposes
                 try {
                     if (tokenManager.MatchAndRemove(Token.TokenType.COMMA).isEmpty())
@@ -817,8 +813,8 @@ public class Parser {
         // if no more tokens, return n
         if (!tokenManager.MoreTokens())
             return n;
-        // Peek if next token is a STRINGLITERAL
-        if (tokenManager.Peek(0).get().getType() != Token.TokenType.STRINGLITERAL && tokenManager.Peek(0).get().getType() != Token.TokenType.WORD && tokenManager.Peek(0).get().getType() != Token.TokenType.NUMBER)
+        // Peek if next token is a STRINGLITERAL or an OperationNode
+        if (tokenManager.Peek(0).get().getType() != Token.TokenType.STRINGLITERAL && tokenManager.Peek(0).get().getType() != Token.TokenType.WORD && tokenManager.Peek(0).get().getType() != Token.TokenType.NUMBER && tokenManager.Peek(0).get().getType() != Token.TokenType.DOLLAR)
             return n;
         // if so, parse the second value
         Optional<Node> n2 = ParseConcatination();

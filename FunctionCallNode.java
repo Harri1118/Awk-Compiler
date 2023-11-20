@@ -32,4 +32,9 @@ public class FunctionCallNode extends StatementNode{
     public String getName(){
         return Name;
     }
+
+    public LinkedList<Node> getParameters(){
+        return parameters;
+    }
+
 }

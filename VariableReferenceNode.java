@@ -58,4 +58,5 @@ public class VariableReferenceNode extends Node{
     public String getIndex(){
         return Index.get().toString();
     }
+    public Node getIndexNode(){ return Index.get();}
 }
